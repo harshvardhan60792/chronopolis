@@ -1,0 +1,17 @@
+[project]
+name = "citygen"
+version = "0.1.0"
+description = "Chronopolis repository analyzer - turns a git repo into city.json"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []          # stdlib only, on purpose (ADR-006)
+
+[project.scripts]
+citygen = "citygen.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["citygen"]

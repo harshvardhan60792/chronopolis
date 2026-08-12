@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+node_modules/
+viewer/dist/
+viewer/dist-embed/
+.vite/
+
+out/*.json
+out/*.json.gz
+out/*.svg
+out/*.png
+!out/.gitkeep
+
+# demo cities that ship with the deployed viewer (added in T18)
+!viewer/public/demo/*.json.gz
+
+.DS_Store
+Thumbs.db
