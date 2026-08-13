@@ -1,4 +1,4 @@
-"""citygen command line interface.
+﻿"""citygen command line interface.
 
     python -m citygen build <repo> -o out/city.json [options]
     python -m citygen inspect out/city.json
@@ -143,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--min-cochange", type=int, default=3, help="min commits together to count for coupling")
     b.add_argument("--world-size", type=float, default=400.0, help="layout world size")
     b.add_argument("--street-width", type=float, default=2.0, help="district street width")
-    b.add_argument("--height-scale", type=float, default=1.6, help="building height scale multiplier")
+    b.add_argument("--height-scale", type=float, default=2.6, help="building height scale multiplier")
     b.set_defaults(func=_cmd_build)
 
     i = sub.add_parser("inspect", help="print a summary of a city.json")
@@ -156,3 +156,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -16,6 +16,13 @@ Append one line per completed task. Newest last.
   Added `citygen/tests/test_invariants.py` (10 invariants incl. plot overlap,
   determinism, no-NaN, git schema). Full suite green; viewer verified in
   browser at 60 fps with 448 buildings.
+- 2026-08-13 — look pass (ADR-010, ADR-011). Preetham sky with four time-of-day
+  presets and a deterministic star field; procedural lit-window facades driven
+  by each file's own activity; wet-asphalt ground with Fresnel sky pickup;
+  ACES filmic tone mapping; half-res bloom that switches itself off if the
+  frame rate cannot afford it; anime.js camera intro. Height formula changed to
+  `max(complexity, sloc/18) ** 0.75` because doc-heavy repos were rendering as
+  a tiled floor rather than a skyline.
 - 2026-08-13 — T02 git miner: extracted commits, churn, authorship, bus factor, and age metrics via git log.
 - 2026-08-13 — T03 co-change coupling: calculated hidden coupling and co-change traffic edges from git history.
 - 2026-08-13 — T04 layout engine: implemented squarified treemap layout assigning plots to buildings.

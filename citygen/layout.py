@@ -1,4 +1,4 @@
-"""Layout engine for Chronopolis: stable temporal squarified treemap."""
+﻿"""Layout engine for Chronopolis: stable temporal squarified treemap."""
 
 import math
 from typing import Callable, Any
@@ -7,7 +7,7 @@ def generate_layout(buildings: list[dict], tree: list[dict],
                     world_size: float = 400.0, 
                     street_width: float = 2.0, 
                     building_gap: float = 0.6, 
-                    height_scale: float = 1.6,
+                    height_scale: float = 2.6,
                     cochange_edges: list = None,
                     import_edges: list = None,
                     traffic_source: str = "cochange",
@@ -71,8 +71,20 @@ def generate_layout(buildings: list[dict], tree: list[dict],
     
     def layout_node(node, x, z, w, d):
         if node["type"] == "file":
-            h = height_scale * (buildings[node["idx"]].get("complexity", 1) ** 0.65)
-            h = max(1.5, min(90.0, h))
+            b = buildings[node["idx"]]
+            # Height is complexity, but a file with no branching is not a
+            # flat plate - a 400-line config or document is still a building.
+            # Taking the larger of complexity and a floors-from-length proxy
+            # keeps non-code files honest and stops the skyline collapsing
+            # into a tiled floor on doc-heavy repos.
+            floors = (b.get("sloc") or b.get("loc") or 0) / 18.0
+            metric = max(b.get("complexity", 1), floors, 1.0)
+            # Exponent 0.75 rather than 0.65: the flatter curve buried the
+            # median building at ~4 units against a ~8 unit footprint, which
+            # renders as tiled floor instead of a skyline. This keeps the
+            # ranking intact while restoring vertical spread.
+            h = height_scale * (metric ** 0.75)
+            h = max(4.0, min(95.0, h))
             
             # Inset for the gap between neighbours, but never take more than a
             # quarter of the smaller side: a fixed inset on a thin cell turns a
@@ -222,6 +234,7 @@ def generate_layout(buildings: list[dict], tree: list[dict],
         "districts": districts,
         "plots": plots,
         "roads": roads,
-        "height_formula": f"h = {height_scale} * (complexity ** 0.65)",
+        "height_formula": f"h = {height_scale} * max(complexity, sloc/18) ** 0.75",
         "road_style": "arcs"
     }
+

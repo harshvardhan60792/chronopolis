@@ -87,6 +87,36 @@ enough for a visual signal.
 **Cost:** a single large refactor commit inflates one author's share. Mitigate
 by ignoring commits touching more than 100 files (configurable).
 
+## ADR-010 — anime.js is allowed in the viewer; nothing else joins it
+**Status:** accepted
+**Context:** ADR-006 froze viewer dependencies at `three` + `vite`. The camera
+intro, UI entrance and future timeline/tour motion are ordinary tweening, and
+hand-rolled easing loops are exactly the code that rots.
+**Decision:** add `animejs` (~7 KB, MIT) as the viewer's animation engine for
+**non-3D-specific** motion. 3D look and feel - sky, facades, traffic - stays in
+shaders; anime.js never drives a per-frame render uniform.
+**Why:** it is the framework-agnostic choice for a vanilla JS project, and the
+cost is trivial next to three itself.
+**Cost:** one more dependency to keep current. The rule stands otherwise: no
+React, no UI framework, no component library.
+
+## ADR-011 — The default look is blue hour, and the sky is physically modelled
+**Status:** accepted
+**Context:** The first renders used a flat black background. The city read as a
+chart on a void.
+**Decision:** use three's `Sky` (Preetham analytic scattering) with four
+presets - blue hour (default), golden hour, night, clear day - and drive sun
+colour, hemisphere light, fog, exposure and window-lit amount from the same
+preset table. Buildings get a procedural window grid evaluated in the fragment
+shader; the ground fakes wet asphalt with a Fresnel term against the horizon
+colour.
+**Why:** blue hour is the one time of day where the sky is still saturated and
+the windows are already lit, which is why nearly every captivating city
+photograph is taken then. Doing it analytically keeps it to one draw call and
+zero textures, so it costs almost nothing against the 60 fps bar.
+**Cost:** more look-tuning constants to maintain, and the facade shader means
+buildings can no longer use a stock three material unmodified.
+
 ---
 
 ### Template for new ADRs

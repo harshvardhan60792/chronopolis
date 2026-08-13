@@ -2,11 +2,12 @@ export function initUI() {
     const ui = document.getElementById('ui');
     ui.innerHTML = `
         <div id="controls-hint" style="background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 4px; transition: opacity 0.3s; font-size: 13px;">
-            <span id="hint-orbit">drag orbit · scroll zoom · F fly · I arcs · T traffic</span>
-            <span id="hint-fly" class="hidden">WASD move · mouse look · Space/Shift up-down · F exit · I arcs · T traffic</span>
+            <span id="hint-orbit">drag orbit · scroll zoom · F fly · K sky · B bloom · I arcs · T traffic</span>
+            <span id="hint-fly" class="hidden">WASD move · mouse look · Space/Shift up-down · F exit · K sky · I arcs · T traffic</span>
         </div>
-        <div id="arcs-legend" class="hidden" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
-        <div id="traffic-legend" class="hidden" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
+        <div id="sky-legend" class="legend" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
+        <div id="arcs-legend" class="legend hidden" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
+        <div id="traffic-legend" class="legend hidden" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
     `;
     
     const hint = document.getElementById('controls-hint');
@@ -36,6 +37,14 @@ export function updateUIForMode(mode) {
         fly.classList.add('hidden');
         orbit.classList.remove('hidden');
     }
+}
+
+export function updateSkyLegend(label, bloomOn, autoDropped = false) {
+    const el = document.getElementById('sky-legend');
+    if (!el) return;
+    let bloom = bloomOn ? 'bloom on' : 'bloom off';
+    if (autoDropped) bloom = 'bloom off (dropped to hold frame rate)';
+    el.innerText = `Sky: ${label} · ${bloom} · K to change`;
 }
 
 export function updateArcsLegend(visible, total, truncated) {

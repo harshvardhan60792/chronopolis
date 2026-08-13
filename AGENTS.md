@@ -22,9 +22,14 @@ continue without breaking what exists or duplicating work.
 - **No backend, no network calls, no AI/LLM/ML anywhere.** The viewer must work
   opened from `file://` with the JSON already loaded. If you find yourself
   adding a fetch to a remote host, you have made a mistake.
-- **`viewer/` dependencies: `three` and `vite` only.** No React, no state
-  library, no UI framework, no bloom/postprocessing packages beyond what ships
-  inside `three/examples/jsm`.
+- **`viewer/` dependencies: `three`, `vite` and `animejs` only** (animejs added
+  by ADR-010 for UI/camera tweening). No React, no state library, no UI
+  framework, no postprocessing packages beyond what ships inside
+  `three/examples/jsm`.
+- **The look is a system, not a pile of constants.** Sun colour, fog, exposure,
+  window-lit amount and bloom strength all come from the preset table in
+  `viewer/src/sky.js`. Add a time of day by adding a row, not by scattering
+  values across modules.
 - **The data contract is `docs/02-DATA-SCHEMA.md`.** Additive changes only. If
   you must change the meaning of an existing field, write an ADR first
   (`docs/04-DECISIONS.md`) and bump `schema` to `chronopolis.city/2`.

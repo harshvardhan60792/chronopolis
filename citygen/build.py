@@ -1,4 +1,4 @@
-"""Assemble a city document from a repository.
+﻿"""Assemble a city document from a repository.
 
 Phase 1 scope (implemented): tree, buildings with metrics, intra-repo import
 edges, aggregate stats.
@@ -93,7 +93,7 @@ def build_city(root: str, opts: WalkOptions | None = None,
                min_cochange: int = 3,
                world_size: float = 400.0,
                street_width: float = 2.0,
-               height_scale: float = 1.6) -> dict:
+               height_scale: float = 2.6) -> dict:
     opts = opts or WalkOptions()
     files: list[FileRec] = walk_repo(root, opts)
     if verbose:
@@ -278,3 +278,4 @@ def _lang_hist(buildings: list[dict]) -> dict:
     for b in buildings:
         hist[b["lang"]] = hist.get(b["lang"], 0) + 1
     return dict(sorted(hist.items(), key=lambda kv: -kv[1]))
+
