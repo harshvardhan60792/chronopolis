@@ -12,13 +12,37 @@ import { Sky } from 'three/examples/jsm/objects/Sky.js';
  * colour, exposure and how "night" it is - so the whole city stays coherent
  * when the time of day changes.
  *
- * Preset design note: the default is BLUE HOUR, not noon. The most captivating
- * cityscapes are shot in the ~20 minutes after sunset, when the sky still
- * holds a deep saturated blue while the windows have already switched on.
- * Full night loses the sky; full day loses the lights. Blue hour has both.
+ * Preset design note: the default is DAYLIGHT, and that is a deliberate
+ * reversal. Night looks spectacular in a screenshot and is close to useless as
+ * a tool - a dark city hides the one thing every overlay depends on, which is
+ * the colour of each building. Purpose first: you must be able to see which
+ * files are which. The night looks are still one keypress away for whoever
+ * wants the postcard.
+ *
+ * Every preset is also tuned soft: no hard sun disc in frame, no clipped
+ * highlights, gentle contrast. Restorative environments are low-arousal ones.
  */
 
 export const SKY_PRESETS = [
+    {
+        id: 'daylight',
+        label: 'clear morning',
+        elevation: 30,
+        azimuth: 138,
+        turbidity: 3.0,
+        rayleigh: 1.5,
+        mieCoefficient: 0.004,
+        mieDirectionalG: 0.78,
+        exposure: 0.42,
+        night: 0.0,
+        sunColor: 0xfff1dc,
+        sunIntensity: 2.35,
+        hemiSky: 0xbcd6f5,
+        hemiGround: 0x5a6247,
+        hemiIntensity: 0.95,
+        fog: 0x9fb8d2,
+        fogDensity: 0.00045,
+    },
     {
         id: 'blue-hour',
         label: 'blue hour',
@@ -140,8 +164,10 @@ function starField(radius) {
             varying float vTwinkle;
             void main() {
                 vec4 mv = modelViewMatrix * vec4(position, 1.0);
-                // slow, per-star desynchronised twinkle
-                vTwinkle = 0.75 + 0.25 * sin(uTime * 1.7 + position.x * 0.07 + position.z * 0.11);
+                // Deliberately NOT twinkling. Per-star flicker is high
+                // frequency motion in the periphery, which the eye keeps
+                // chasing - the single most fatiguing thing in the old look.
+                vTwinkle = 1.0;
                 gl_PointSize = aSize * uPixelRatio * 2.2;
                 gl_Position = projectionMatrix * mv;
             }

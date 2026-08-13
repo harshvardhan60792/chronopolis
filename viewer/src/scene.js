@@ -7,7 +7,9 @@ import { updateArcsLegend, updateTrafficLegend, updateSkyLegend } from './ui.js'
 import { createTraffic } from './traffic.js';
 import { setupPicking } from './picking.js';
 import { createSky, SKY_PRESETS } from './sky.js';
-import { createGround } from './ground.js';
+import { createTerrain } from './terrain.js';
+import { createNature } from './nature.js';
+import { createClouds } from './clouds.js';
 import { createPostFX } from './postfx.js';
 import { playIntro } from './intro.js';
 
@@ -29,17 +31,26 @@ export function initScene(cityData) {
 
     const camera = new THREE.PerspectiveCamera(
         50, window.innerWidth / window.innerHeight, 0.6, world.width * 14);
-    camera.position.set(world.width * 0.6, world.width * 0.24, world.depth * 0.6);
+    camera.position.set(
+        world.width * 1.38, world.width * 0.46, world.depth * 1.38);
 
     const controls = setupControls(camera, renderer, world.width);
 
     const sky = createSky(scene, renderer, world.width, camera.far);
-    const ground = createGround(world.width, SKY_PRESETS[0].fog);
-    scene.add(ground);
+    const terrain = createTerrain(world.width, SKY_PRESETS[0].fog);
+    scene.add(terrain);
+
+    const clouds = createClouds(world.width);
+    scene.add(clouds);
 
     if (cityData.layout.districts) {
         scene.add(createDistricts(cityData.layout.districts));
     }
+
+    // Green cover is inversely proportional to how built-up a district is, so
+    // the quiet parts of the repo literally look like parkland.
+    const nature = createNature(cityData, world.width);
+    scene.add(nature);
 
     const buildingsMesh = createBuildings(cityData.buildings, cityData.layout.plots);
     scene.add(buildingsMesh);
@@ -55,6 +66,11 @@ export function initScene(cityData) {
     if (cityData.layout.roads && cityData.layout.roads.length > 0) {
         trafficData = createTraffic(cityData, 0.6);
         if (trafficData) {
+            // Slow the flow right down. Fast particles across the whole map
+            // are peripheral motion the eye cannot stop tracking; at a third
+            // of the speed the same information reads as a calm current.
+            const tu = trafficData.points.material.uniforms;
+            if (tu && tu.uSpeedScale) tu.uSpeedScale.value *= 0.35;
             scene.add(trafficData.points);
             updateTrafficLegend(true, cityData.stats.traffic_source || 'cochange');
         }
@@ -66,13 +82,18 @@ export function initScene(cityData) {
     // Keep every look-dependent uniform in one place so a sky change updates
     // the buildings and the street in the same frame.
     const facade = buildingsMesh.userData.uniforms;
-    const groundU = ground.userData.uniforms;
+    const land = terrain.userData.uniforms.land;
+    const sea = terrain.userData.uniforms.sea;
 
     function syncLook(preset) {
         facade.uNight.value = preset.night;
-        groundU.uNight.value = preset.night;
-        groundU.uHorizon.value.setHex(preset.fog);
-        postfx.bloom.strength = 0.18 + 0.24 * preset.night;
+        land.uNight.value = preset.night;
+        sea.uNight.value = preset.night;
+        land.uHorizon.value.setHex(preset.fog);
+        sea.uHorizon.value.setHex(preset.fog);
+        clouds.userData.material.opacity = 0.34 * (1 - preset.night * 0.75);
+        // Bloom only ever earns its cost at night, and even then gently.
+        postfx.bloom.strength = 0.10 + 0.22 * preset.night;
     }
     syncLook(SKY_PRESETS[0]);
 
@@ -135,7 +156,8 @@ export function initScene(cityData) {
 
         controls.update();
         facade.uTime.value = t;
-        groundU.uTime.value = t;
+        sea.uTime.value = t;
+        clouds.userData.update(t);
         sky.update(t);
         if (trafficData && trafficData.points.visible) trafficData.update(t);
 

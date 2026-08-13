@@ -51,10 +51,12 @@ export function createDistricts(districts) {
         color.getHSL(hsl);
         // Keep the hue as the district's identity, drop it to city-block
         // darkness. Fully saturated plates made the city look like a chart.
+        // Pavement stays in the cool, dull half of the palette so the warm
+        // building colours read as the subject (see palette.js).
         color.setHSL(
             hsl.h,
-            hsl.s * 0.42,
-            Math.max(0.055, 0.135 - (d.depth - 1) * 0.022),
+            hsl.s * 0.8,
+            Math.max(0.10, 0.24 - (d.depth - 1) * 0.035),
         );
         
         mesh.setColorAt(i, color);

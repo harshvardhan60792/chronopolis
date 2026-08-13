@@ -29,7 +29,14 @@ continue without breaking what exists or duplicating work.
 - **The look is a system, not a pile of constants.** Sun colour, fog, exposure,
   window-lit amount and bloom strength all come from the preset table in
   `viewer/src/sky.js`. Add a time of day by adding a row, not by scattering
-  values across modules.
+  values across modules. Colours come from `viewer/src/palette.js`.
+- **Comprehension outranks looks (ADR-012).** If an effect makes the data
+  harder to read, it loses. Concretely, and non-negotiably: no flicker, no
+  twinkle, no sparkle, no pulsing, no strobing, no fast peripheral motion
+  anywhere. Default sky stays a daylight preset.
+- **Cool environment, warm data (ADR-013).** Terrain and pavement stay cool and
+  under ~0.25 saturation; buildings stay warm-biased; only selection and search
+  results are fully saturated.
 - **The data contract is `docs/02-DATA-SCHEMA.md`.** Additive changes only. If
   you must change the meaning of an existing field, write an ADR first
   (`docs/04-DECISIONS.md`) and bump `schema` to `chronopolis.city/2`.

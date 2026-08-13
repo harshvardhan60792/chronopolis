@@ -117,6 +117,51 @@ zero textures, so it costs almost nothing against the 60 fps bar.
 **Cost:** more look-tuning constants to maintain, and the facade shader means
 buildings can no longer use a stock three material unmodified.
 
+## ADR-012 — Calm by default: daylight, no flicker, city set in landscape
+**Status:** accepted, supersedes the defaults in ADR-011 (the preset machinery
+from ADR-011 stands; only which preset leads, and the motion budget, changed)
+**Context:** The night-metropolis look was striking and bad at the job. A dark
+city hides building colour, and building colour is what every overlay mode
+encodes — so the prettier it got, the less it explained. Flickering windows and
+twinkling stars made it actively tiring: dozens of small high-frequency motions
+in the periphery, which is "hard fascination" and the opposite of restful.
+**Decision:** three rules, in priority order.
+1. **Comprehension outranks looks.** Default sky is `clear morning`; every
+   building's own colour is legible without interaction. Night presets remain
+   one keypress away.
+2. **Motion is slow, broad and rare.** No flicker anywhere. Stars do not
+   twinkle, windows do not blink, water does not sparkle, hotspots do not
+   pulse. The only always-on motion is drifting cloud and traffic at a third of
+   its old speed. Restorative environments are low-arousal ones (Attention
+   Restoration Theory, "soft fascination").
+3. **The city sits in a landscape.** Olive-green land with low-frequency
+   variation, a sea beyond it, street trees along the avenues and a clustered
+   green belt around the built area. Green cover is inversely proportional to
+   how built-up a district is, so the calm parts of the picture are also the
+   quiet parts of the repo — the nature carries data.
+**Why:** the tool's first job is to explain a codebase, its second is to be
+pleasant enough that people keep exploring. Anything that trades (1) for (3)
+gets cut.
+**Cost:** less immediately dramatic than the neon night. Accepted.
+
+## ADR-013 — Colour follows a film grade: cool environment, warm data
+**Status:** accepted
+**Context:** With a thousand boxes on screen, "what should I look at" has to be
+answerable pre-attentively.
+**Decision:** adopt two conventions from film colour.
+*Complementary separation* — environment (sky, sea, land, pavement) is held in
+the cool half of the wheel; buildings are warm-biased. Complementary hues push
+the subject forward and the background back, which is why the teal/orange grade
+is everywhere; here it means buildings detach from the ground with no outline
+or glow. *Desaturate the environment, saturate the focus* — terrain stays under
+~0.25 saturation, buildings sit at 0.45–0.60, and only the selected building
+and search hits go fully saturated (`emphasise()` / `recede()` in
+`palette.js`). Saturation itself becomes the signal.
+**Why:** it makes selection and search legible without adding UI, and keeps
+overlay ramps readable against a neutral stage.
+**Cost:** the language palette can no longer use each language's "official"
+brand colour, since several are cool and would sink into the terrain.
+
 ---
 
 ### Template for new ADRs

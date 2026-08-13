@@ -112,7 +112,7 @@ export function createBuildings(buildings, plots) {
                 vec3 nrm = normalize(vNormal);
                 float sideness = 1.0 - smoothstep(0.45, 0.75, abs(nrm.y));
 
-                if (sideness > 0.001 && uNight > 0.001) {
+                if (sideness > 0.001) {
                     // Horizontal coordinate runs along whichever face we are on.
                     float across = abs(nrm.x) > 0.5
                         ? (vLocal.z + 0.5) * vSize.z
@@ -131,12 +131,12 @@ export function createBuildings(buildings, plots) {
                     float lobby = (1.0 - smoothstep(uWindowH * 0.9, uWindowH * 1.1, up)) * 0.55;
 
                     float r = hash21(cell + vec2(nrm.x * 3.0, nrm.z * 7.0), vSeed);
-                    float on = step(1.0 - vLit, r);
-
-                    // A few panes flicker slowly; most are steady. Real towers
-                    // are mostly static with a little life in them.
-                    float flick = step(0.94, r) * (0.55 + 0.45 * sin(uTime * 2.3 + r * 40.0));
-                    float lit = on * mix(1.0, flick, step(0.94, r));
+                    // Every lit window is STEADY. An earlier version flickered
+                    // a few panes for "life"; across hundreds of buildings that
+                    // is a field of blinking dots in the periphery and it made
+                    // the scene genuinely tiring to look at. Stillness is the
+                    // feature.
+                    float lit = step(1.0 - vLit, r);
 
                     vec3 tint = mix(uWarm, uCool, step(0.82, hash21(cell.yx, vSeed + 3.7)));
 
@@ -145,9 +145,13 @@ export function createBuildings(buildings, plots) {
                     float vary = 0.55 + 0.45 * hash21(cell + 11.3, vSeed + 5.1);
                     float glow = (pane * lit * vary + lobby * 0.85) * sideness * uNight;
 
+                    // Daylight: the windows are glass, not lamps. A slight
+                    // darkening where the panes are gives the facade real
+                    // structure and keeps the building's own colour - which is
+                    // what every overlay mode encodes - fully readable.
+                    gl_FragColor.rgb *= 1.0 - 0.22 * pane * sideness * (1.0 - uNight);
+
                     gl_FragColor.rgb += tint * glow * 1.05;
-                    // Slight darkening of the wall between panes keeps the
-                    // facade from turning into a flat glowing slab.
                     gl_FragColor.rgb *= 1.0 - 0.25 * sideness * uNight * (1.0 - pane) * step(uWindowH, up);
                 }
             `);

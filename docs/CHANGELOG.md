@@ -23,6 +23,14 @@ Append one line per completed task. Newest last.
   frame rate cannot afford it; anime.js camera intro. Height formula changed to
   `max(complexity, sloc/18) ** 0.75` because doc-heavy repos were rendering as
   a tiled floor rather than a skyline.
+- 2026-08-13 — calm pass (ADR-012, ADR-013). Default sky is now daylight, so
+  building colour — which every overlay encodes — is readable without
+  interaction. All flicker, twinkle and shimmer removed; traffic slowed to a
+  third. City now sits in landscape: olive-green land, sea beyond, street trees
+  along the avenues and a clustered green belt, with green cover inversely
+  proportional to how built-up each district is. Palette regraded on film
+  conventions: cool desaturated environment, warm buildings, saturation
+  reserved for focus.
 - 2026-08-13 — T02 git miner: extracted commits, churn, authorship, bus factor, and age metrics via git log.
 - 2026-08-13 — T03 co-change coupling: calculated hidden coupling and co-change traffic edges from git history.
 - 2026-08-13 — T04 layout engine: implemented squarified treemap layout assigning plots to buildings.

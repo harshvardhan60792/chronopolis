@@ -16,15 +16,25 @@ export function playIntro(camera, controls, world) {
     // what anyone screenshots. Sitting the camera at roughly a third of the
     // world's width above ground puts the skyline against the sky instead of
     // flattening it into a floor plan.
+    // Positions are offsets FROM THE CITY CENTRE, not absolute world
+    // coordinates. The city spans 0..world.width, so an absolute 0.6 * width
+    // lands the camera in the middle of downtown looking at a wall.
+    const cx = world.width / 2;
+    const cz = world.depth / 2;
+    const reach = world.width;
+
+    // The default view has one job: show the whole city and enough of the land
+    // around it to place it. Comprehension first - a dramatic low angle that
+    // hides two thirds of the repo is a worse default than a clear one.
     const start = {
-        x: world.width * 1.15,
-        y: world.width * 0.62,
-        z: world.depth * 1.15,
+        x: cx + reach * 1.35,
+        y: reach * 0.95,
+        z: cz + reach * 1.35,
     };
     const end = {
-        x: world.width * 0.60,
-        y: world.width * 0.24,
-        z: world.depth * 0.60,
+        x: cx + reach * 0.88,
+        y: reach * 0.46,
+        z: cz + reach * 0.88,
     };
 
     camera.position.set(start.x, start.y, start.z);
