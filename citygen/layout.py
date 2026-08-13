@@ -234,6 +234,10 @@ def generate_layout(buildings: list[dict], tree: list[dict],
         "districts": districts,
         "plots": plots,
         "roads": roads,
+        # The viewer needs this to know where the carriageway is: district
+        # rectangles tile with no gap between them, so the street is the
+        # street_width margin *inside* each district, not a gap outside it.
+        "street_width": street_width,
         "height_formula": f"h = {height_scale} * max(complexity, sloc/18) ** 0.75",
         "road_style": "arcs"
     }

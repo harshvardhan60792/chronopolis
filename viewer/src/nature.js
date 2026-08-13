@@ -47,32 +47,51 @@ export function createNature(city, worldSize) {
     const MAX_TREES = 1800;
 
     // --- 1. street trees ----------------------------------------------------
-    // A treemap fills its rectangle almost completely, so the only reliable
-    // open ground inside the city is the street grid between districts. Lining
-    // those avenues is what turns a block diagram into a place, and it costs
-    // no readability because the trees sit exactly where no data is drawn.
+    // Geometry that matters: district rectangles TILE - there is no gap
+    // between them. The road is the `street_width` margin inside each
+    // district, between its boundary and where its buildings start. So a tree
+    // belongs at roughly three quarters of the way across that margin: on the
+    // kerb, with the middle of the carriageway left clear.
+    const sw = city.layout.street_width || 2.0;
+    const kerb = sw * 0.78;
+    const maxCanopy = sw * 0.30;      // crown radius = 1.5 * scale
+
+    // Plot rectangles per district, so a tree never lands on a building.
+    const plotsByDir = new Map();
+    city.buildings.forEach((b, i) => {
+        const p = plots[i];
+        if (!p) return;
+        const key = b.dir || '';
+        if (!plotsByDir.has(key)) plotsByDir.set(key, []);
+        plotsByDir.get(key).push(p);
+    });
+
+    const clearOfBuildings = (x, z, list) => {
+        if (!list) return true;
+        for (const p of list) {
+            if (x > p.x - 0.5 && x < p.x + p.w + 0.5 &&
+                z > p.z - 0.5 && z < p.z + p.d + 0.5) return false;
+        }
+        return true;
+    };
+
     for (const d of districts) {
+        if (d.w < sw * 3 || d.d < sw * 3) continue;   // too small to have streets
         const step = 7 + rnd() * 3;
-        // Hug the kerb, do not stand in the carriageway. The street gap is
-        // only ~2 units wide, so an offset of half that put every tree in the
-        // middle of the road.
-        const inset = 0.42;
+        const here = plotsByDir.get(d.path);
         const edges = [
-            { x0: d.x, z0: d.z - inset, dx: 1, dz: 0, len: d.w },
-            { x0: d.x, z0: d.z + d.d + inset, dx: 1, dz: 0, len: d.w },
-            { x0: d.x - inset, z0: d.z, dx: 0, dz: 1, len: d.d },
-            { x0: d.x + d.w + inset, z0: d.z, dx: 0, dz: 1, len: d.d },
+            { x0: d.x, z0: d.z + kerb, dx: 1, dz: 0, len: d.w },
+            { x0: d.x, z0: d.z + d.d - kerb, dx: 1, dz: 0, len: d.w },
+            { x0: d.x + kerb, z0: d.z, dx: 0, dz: 1, len: d.d },
+            { x0: d.x + d.w - kerb, z0: d.z, dx: 0, dz: 1, len: d.d },
         ];
         for (const e of edges) {
             for (let t = step * 0.5; t < e.len; t += step) {
                 if (rnd() > 0.55) continue;              // irregular, not a hedge
-                spots.push({
-                    x: e.x0 + e.dx * t + (rnd() - 0.5) * 0.3,
-                    z: e.z0 + e.dz * t + (rnd() - 0.5) * 0.3,
-                    // Canopy radius is 1.5 * scale, so keep scale under ~0.4
-                    // or the crown overhangs the street it is meant to line.
-                    scale: 0.26 + rnd() * 0.14,
-                });
+                const x = e.x0 + e.dx * t;
+                const z = e.z0 + e.dz * t;
+                if (!clearOfBuildings(x, z, here)) continue;
+                spots.push({ x, z, scale: (maxCanopy / 1.5) * (0.75 + rnd() * 0.25) });
             }
         }
     }
