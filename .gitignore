@@ -15,7 +15,9 @@ out/*.svg
 out/*.png
 !out/.gitkeep
 
-# demo cities that ship with the deployed viewer (added in T18)
+# local cities copied in for manual testing; demo cities land in
+# viewer/public/demo/ in T18
+viewer/public/*.json
 !viewer/public/demo/*.json.gz
 
 .DS_Store

@@ -10,11 +10,15 @@ shape - only fills in. See docs/02-DATA-SCHEMA.md.
 
 from __future__ import annotations
 
+import bisect
 import datetime as _dt
 import os
 import subprocess
 
 from . import SCHEMA, __version__
+from .gitmine import mine_git_history
+from .coupling import calculate_cochange
+from .layout import generate_layout
 from .metrics import generic_metrics, python_metrics
 from .resolve import ModuleIndex
 from .walk import FileRec, WalkOptions, read_text, walk_repo
@@ -52,8 +56,44 @@ def _dir_chain(rel: str) -> list[str]:
     return ["/".join(parts[: i + 1]) for i in range(len(parts))]
 
 
+def calculate_health(buildings: list[dict]) -> None:
+    """Composite 'how worried should I be' score, 0..1, higher is worse.
+
+    Percentile ranks are within-repo so the colour ramp stays meaningful for a
+    40-file project and a 4000-file one alike. Formula is fixed in
+    tasks/T12-overlays-legend.md - change it there first.
+    """
+    churn_list = sorted(b["churn"] for b in buildings if "churn" in b)
+    cx_list = sorted(b.get("complexity", 0) for b in buildings)
+
+    def rank(val: float, lst: list) -> float:
+        # bisect keeps this O(n log n) overall; a linear scan per building made
+        # it O(n^2) and showed up on repos with thousands of files
+        return bisect.bisect_left(lst, val) / len(lst) if lst else 0.0
+
+    for b in buildings:
+        if "churn" not in b:
+            b["health"] = 0.0
+            continue
+        churn_n = rank(b["churn"], churn_list)
+        cx_n = rank(b.get("complexity", 0), cx_list)
+        stale = b.get("stale_days")
+        stale_n = 1.0 if stale is None else max(0.0, min(stale / 540.0, 1.0))
+        owner_risk = b.get("owner_share") or 0.0
+        b["health"] = round(0.40 * churn_n * cx_n + 0.25 * cx_n
+                            + 0.20 * owner_risk + 0.15 * (1 - stale_n), 4)
+
+
 def build_city(root: str, opts: WalkOptions | None = None,
-               verbose: bool = False) -> dict:
+               verbose: bool = False,
+               no_git: bool = False,
+               max_commits: int | None = None,
+               since: str | None = None,
+               max_commit_files: int = 60,
+               min_cochange: int = 3,
+               world_size: float = 400.0,
+               street_width: float = 2.0,
+               height_scale: float = 1.6) -> dict:
     opts = opts or WalkOptions()
     files: list[FileRec] = walk_repo(root, opts)
     if verbose:
@@ -154,6 +194,30 @@ def build_city(root: str, opts: WalkOptions | None = None,
             node["complexity"] += b["complexity"]
     tree = [dirs[k] for k in sorted(dirs)]
 
+    git_stats = None
+    commits = []
+    if not no_git:
+        git_stats, commits = mine_git_history(root, buildings, max_commits, since, max_commit_files)
+        
+    cochange_edges = []
+    cochange_pairs = 0
+    hidden_coupling = 0
+    top_hidden = []
+    
+    if git_stats and git_stats["commit_count"] >= 30:
+        cochange_edges, cochange_pairs, hidden_coupling, top_hidden = calculate_cochange(
+            commits, buildings, import_edges, min_cochange)
+
+    # Thin history produces noise, not signal: fall back to import-driven
+    # traffic and say so in the legend (ADR-005).
+    traffic_source = "cochange"
+    if not git_stats or git_stats["commit_count"] < 30 or cochange_pairs < 20:
+        traffic_source = "imports"
+        cochange_edges = []
+        cochange_pairs = 0
+        hidden_coupling = 0
+        top_hidden = []
+
     stats = {
         "files": len(buildings),
         "dirs": len(tree),
@@ -166,7 +230,24 @@ def build_city(root: str, opts: WalkOptions | None = None,
         "import_edges": len(import_edges),
         "parse_errors": len(parse_errors),
         "langs": _lang_hist(buildings),
+        "cochange_pairs": cochange_pairs,
+        "hidden_coupling": hidden_coupling,
+        "top_hidden_coupling": top_hidden,
+        "traffic_source": traffic_source,
     }
+    
+    calculate_health(buildings)
+    
+    layout = generate_layout(
+        buildings=buildings,
+        tree=tree,
+        world_size=world_size,
+        street_width=street_width,
+        height_scale=height_scale,
+        cochange_edges=cochange_edges,
+        import_edges=import_edges,
+        traffic_source=traffic_source
+    )
 
     return {
         "schema": SCHEMA,
@@ -183,9 +264,9 @@ def build_city(root: str, opts: WalkOptions | None = None,
         "stats": stats,
         "tree": tree,
         "buildings": buildings,
-        "edges": {"import": import_edges, "call": [], "cochange": []},
-        "git": None,        # phase 3
-        "layout": None,     # phase 4
+        "edges": {"import": import_edges, "call": [], "cochange": cochange_edges},
+        "git": git_stats,
+        "layout": layout,
         "snapshots": None,  # phase 8
         "stories": [],      # phase 10
         "diagnostics": {"parse_errors": parse_errors[:50]},

@@ -29,7 +29,12 @@ def _cmd_build(a: argparse.Namespace) -> int:
         include=a.include or [],
         all_languages=not a.python_only,
     )
-    city = build_city(a.repo, opts, verbose=a.verbose)
+    city = build_city(
+        a.repo, opts, verbose=a.verbose,
+        no_git=a.no_git, max_commits=a.max_commits, since=a.since,
+        max_commit_files=a.max_commit_files, min_cochange=a.min_cochange,
+        world_size=a.world_size, street_width=a.street_width, height_scale=a.height_scale
+    )
     dt = time.time() - t0
     city["build_seconds"] = round(dt, 3)
 
@@ -92,6 +97,24 @@ def _cmd_inspect(a: argparse.Namespace) -> int:
         print("\n-- parse errors")
         for e in city["diagnostics"]["parse_errors"][:5]:
             print(f"   {e['path']}: {e['error'][:70]}")
+
+    if city.get("git"):
+        top("churn")
+        top("commits")
+        bf1 = sum(1 for b in bs if b.get("bus_factor") == 1)
+        print(f"\n-- files with bus_factor == 1: {bf1}")
+        print("\n-- top 8 stalest files")
+        for b in sorted([b for b in bs if b.get("stale_days")], key=lambda x: -x["stale_days"])[:8]:
+            print(f"   {b['stale_days']:>7} days  {b['path']}")
+            
+        print(f"\n-- top 10 co-change pairs ({s.get('cochange_pairs')} pairs total)")
+        for edge in city["edges"]["cochange"][:10]:
+            print(f"   {edge[3]:>6.3f} strength  {bs[edge[0]]['path']} <-> {bs[edge[1]]['path']} ({edge[2]} commits)")
+
+        print(f"\n-- top 10 hidden coupling pairs ({s.get('hidden_coupling')} total)")
+        for h in s.get("top_hidden_coupling", [])[:10]:
+            print(f"   {h[2]:>6.3f} strength  {bs[h[0]]['path']} <-> {bs[h[1]]['path']}")
+            
     return 0
 
 
@@ -113,6 +136,14 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--compact", action="store_true", help="minified JSON")
     b.add_argument("--gzip", action="store_true", help="write .json.gz")
     b.add_argument("-v", "--verbose", action="store_true")
+    b.add_argument("--no-git", action="store_true", help="skip git history")
+    b.add_argument("--max-commits", type=int, help="limit git commits")
+    b.add_argument("--since", help="limit git commits since DATE")
+    b.add_argument("--max-commit-files", type=int, default=60, help="max files per commit to count for coupling")
+    b.add_argument("--min-cochange", type=int, default=3, help="min commits together to count for coupling")
+    b.add_argument("--world-size", type=float, default=400.0, help="layout world size")
+    b.add_argument("--street-width", type=float, default=2.0, help="district street width")
+    b.add_argument("--height-scale", type=float, default=1.6, help="building height scale multiplier")
     b.set_defaults(func=_cmd_build)
 
     i = sub.add_parser("inspect", help="print a summary of a city.json")

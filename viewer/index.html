@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chronopolis</title>
+    <style>
+      body { margin: 0; overflow: hidden; background: linear-gradient(180deg, #1a2233 0%, #0b0e14 100%); color: white; font-family: sans-serif; }
+      canvas { display: block; }
+      #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+      #dropzone { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0b0e14; z-index: 10; flex-direction: column; }
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id="ui"></div>
+    <div id="dropzone">Loading city...</div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
