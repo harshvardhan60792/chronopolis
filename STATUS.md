@@ -30,6 +30,37 @@ with real screenshots. M1-M4 all complete.
 | T17 | Onboarding: drag-drop JSON, loading + empty states | **DONE** | T05 | Found implemented, uncommitted (`dropzone.js`). Builds and shows the empty state correctly on first load. |
 | T18 | Docs, screenshots, CI, GitHub Pages deploy | **DONE** | — | README rewritten, LICENSE (MIT) added, CI + Pages workflows added. Audited and fixed: CI ran `unittest discover`, which is blind to `test_phase1.py`/`test_invariants.py` (bare `test_*` functions, not `TestCase` subclasses) - confirmed locally it silently ran 13 of the real 30 checks; changed to run every test file directly. Pages workflow built the 5-file toy fixture and labelled it `reachable.city.json`, and built Chronopolis's own repo but labelled it `cve-bin-tool.city.json` - both demo links would have shown the wrong project. Relabelled honestly (`toyrepo.city.json`, `chronopolis.city.json`) and updated the dropzone links to match. 2026-08-15: captured 3 real screenshots (`docs/img/hero.png`, `overlays.png`, `timemachine.png`) via a headful-Puppeteer script driving the actual built app against real city.json fixtures (cve-bin-tool for the skyline, a 161-commit sibling repo for the timeline shot with real snapshots/ruins) - not mockups. While framing the overlay screenshot, found and fixed a real layout bug my own longer control-hint text had exposed: the hint stack (top-left) and the search bar (top-center) had no awareness of each other's height and visually collided; capped the hint's width and moved the search bar down to clear it. README now documents navigation (`## Getting Around`) and the time machine with real screenshots. 2026-08-15 continued: added `.github/workflows/pr-preview.yml` - builds every PR's own checkout into a city, exports self-contained HTML, uploads as an artifact, comments a link on the PR. Verified the two CLI commands it runs work against this repo. That run surfaced a real bug: `citygen/layout.py` had a stray UTF-8 BOM, which `ast.parse()` treats as an invalid character rather than whitespace, so citygen failed to parse its own file (a genuine dogfooding failure the new action would have caught on the very first real PR). Root-caused and fixed generally in `walk.read_text` (`utf-8-sig` instead of `utf-8`, a no-op for files without a BOM) rather than just patching the one file, since a BOM'd source file is a real, if uncommon, thing to encounter in the wild. Also added `citygen build`'s CLI polish (colourised summary line, "next:" hint) using only ANSI codes gated on `isatty()`/`NO_COLOR` - no `rich` dependency, which would violate ADR-006 (stdlib only). |
 
+## Phase 2 — code-intelligence engine
+
+Plan: `docs/07-PHASE2-PLAN.md`. Task files: `tasks/T19..T34`.
+Thesis: the analysis is the product; the 3D city is its deep-dive view.
+
+| ID | Task | Status | Blocked by | Notes |
+|----|------|--------|-----------|-------|
+| T19 | `citygen impact` — blast radius CLI | **TODO** | — | Pure exposure of `edges.import`, which has existed since T01. Highest value per hour in the plan. |
+| T20 | `citygen risk` — shared risk engine | **TODO** | T19 | One library, three surfaces (T21/T22 both consume it). Risk ≠ health: health is "how bad is this file", risk is "how bad is *changing* it". |
+| T21 | PR risk comment | **TODO** | T19, T20 | Upgrades `pr-preview.yml` from a download link to the finding itself. Highest retention surface: nobody has to install anything. |
+| T22 | `citygen hook install` | **TODO** | T20 | Read-only over an existing `city.json`; <200 ms budget; warns, never blocks by default. A slow hook gets `--no-verify`'d permanently. |
+| T23 | Profile harness | **TODO** | — | **Runs before T24/T25.** `docs/05-PERFORMANCE.md` shows 34 s cold / 1.5 s warm on 1272 files — that gap suggests I/O, not parsing, and nobody has checked. This task decides what the cache actually targets. |
+| T24 | Content-addressed cache | **TODO** | T23 | Cache parse results by content hash; never cache resolved edges (resolution depends on the whole file set). |
+| T25 | Incremental rebuild | **TODO** | T24 | The signal task. Invariant: incremental output must be **byte-identical** to a cold build. Verified by a seeded differential fuzz test, not spot checks. |
+| T26 | Scale proof | **TODO** | T25 | Real numbers, pinned shas, named machine. Publishes at least one honest failure. Produces the gate for T30/T31. |
+| T27 | Tree-sitter optional backend | **TODO** | T25 | Needs **ADR-014**: core stays stdlib-only, tree-sitter is an extra, CI tests both paths. If the optional path degrades the default path, it is reverted. |
+| T28 | Parser parity | **TODO** | T27 | Hand-counted fixtures per language. Python calibrates against `ast` (exact). Must publish at least one "no measurable gain" or "worse here" finding. |
+| T29 | Fill `edges.call` | **TODO** | T27 | The schema has reserved it since T01 and `build.py:406` has emitted `[]` ever since. Must report `call_resolution_rate` — a partial call graph presented as complete is the failure mode. |
+| T32 | SZZ-lite ground truth | **TODO** | T20 | Mine bug-introducing commits. **The 30-pair manual audit is mandatory before T33 publishes anything.** Label quality is the hard part, not the scoring. |
+| T33 | Risk score validation | **TODO** | T32 | No ML (`00-VISION.md` non-goal stands, Phase 2 §3.6). Fixed rule, measured. Temporal split to prevent leakage. Ships **even if churn alone wins**. |
+| T34 | Engineering write-up | **TODO** | T25, T26, T33 | One subject, 1500–2500 words, includes a "what went wrong" section. Every number traces to a source doc. |
+| T31 | Viewer stress test | **TODO** | T26 | **Runs before T30.** Identifies which of four possible walls binds; a box is 12 triangles, so "add LOD" is the wrong fix for three of them. |
+| T30 | Viewer scaling | **CONDITIONAL** | T31 | **Not scheduled.** `docs/05-PERFORMANCE.md:66` forbids culling/LOD/octree work without a measurement demanding it, and ADR-002 calls it unnecessary complexity. Built only if T31 overturns both with evidence. `WONTFIX: measured, not the bottleneck` is a successful outcome. |
+
+Phase 2 ordering rules that are not negotiable:
+1. **T23 before T24/T25** — do not cache a stage nobody measured.
+2. **T31 before T30** — and T30 probably never.
+3. **T32's audit before T33 publishes** — unaudited labels invalidate the study.
+4. **No number anywhere** (README, commit message, write-up) that is not
+   reproducible from `docs/05-PERFORMANCE.md` or `docs/08-RISK-MODEL.md`.
+
 ## Milestones
 
 - **M1 — data is real** (T01–T04): a correct, deterministic `city.json` with layout.
