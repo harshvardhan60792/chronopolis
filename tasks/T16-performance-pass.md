@@ -6,6 +6,14 @@
 Prove, with recorded numbers, that a 1000+ file repository holds ≥ 30 fps with
 every layer on — and fix it if it does not.
 
+## Resolved (2026-08-15)
+
+Done. Measured in real headful Chrome via `viewer/scripts/measure-perf.mjs`
+(`npm run perf`) — see `docs/05-PERFORMANCE.md` for numbers and
+`docs/CHANGELOG.md` for the full entry. All bars cleared, no escalation-ladder
+step needed. The note below is kept for context on why the earlier numbers in
+this file's history were wrong.
+
 ## Note on measurement environment (2026-08-15)
 
 This project's `requestAnimationFrame` cannot be trusted for fps measurement

@@ -51,11 +51,11 @@ Serves the viewer locally and automatically copies your city into it.
 
 ## Performance
 
-The architecture is designed for 60 fps on 1000+ file repositories (one draw
-call per layer, regardless of file count — see `docs/01-ARCHITECTURE.md`), but
-that number has not yet been measured in a real browser and should be treated
-as a target, not a verified result, until `docs/05-PERFORMANCE.md` says
-otherwise.
+Measured at 58–61 fps on a 1272-file repository (cve-bin-tool) on integrated
+graphics, across idle orbit, fast orbit, fly-through, timeline scrubbing and
+every overlay/layer on at once — one draw call per layer, regardless of file
+count (see `docs/01-ARCHITECTURE.md`). Full numbers, hardware and
+reproduction steps in `docs/05-PERFORMANCE.md`.
 
 ## Limitations
 

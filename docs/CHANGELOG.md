@@ -2,6 +2,19 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — T16 (performance pass) measured for real. Added
+  `viewer/scripts/measure-perf.mjs` (`npm run perf`): headful Puppeteer Chrome
+  driving the built preview, chosen specifically to avoid the two traps that
+  produced fake numbers before — the IDE's browser-automation pane throttles
+  `requestAnimationFrame` to ~1 Hz, and headless Chrome's default software
+  rasterizer isn't representative of real GPU cost. On cve-bin-tool (1272
+  buildings) on integrated graphics: 58-61 fps across idle orbit, fast orbit,
+  street-level fly-through, timeline scrubbing, and every layer/overlay on at
+  once; 1767 ms to first frame; 0 network requests after load; flat JS heap
+  over 60 s; `?selftest=1` green. All bars cleared with no escalation-ladder
+  step needed. Numbers written into `docs/05-PERFORMANCE.md` with hardware and
+  browser version. T16 and its README claim now say DONE instead of pending.
+
 - 2026-08-13 — T01 parser core: repo walk with vendor deny-list, generic + AST
   metrics, decision-point complexity, intra-repo import resolution (absolute,
   relative, `from pkg import submodule`), city.json v1 emitter, `build` and

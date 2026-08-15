@@ -4,21 +4,58 @@
 
 | Bar | Target | Measured | Status |
 |---|---|---|---|
-| Viewer fps, 1000+ file repo, orbit at default zoom | ≥ 30 fps (60 target) | — | pending T16 |
-| Viewer fps while timeline is scrubbing | ≥ 30 fps | — | pending T16 |
-| Time to first frame after `city.json` load (1000 files) | < 2 s | — | pending T16 |
+| Viewer fps, 1000+ file repo, orbit at default zoom | ≥ 30 fps (60 target) | **61 fps** | ✅ T16 |
+| Viewer fps while timeline is scrubbing | ≥ 30 fps | **60 fps** | ✅ T16 |
+| Time to first frame after `city.json` load (1000 files) | < 2 s | **1767 ms** | ✅ T16 |
 | `citygen build` on 1000+ py files | < 60 s | **~1.5 s warm / 34 s cold-cache** (cve-bin-tool, 1272 files) | ✅ T01 |
 | `city.json` size, 1000 files, gzipped | < 2 MB | **117 KB** (cve-bin-tool, 1272 files, no git history) | ✅ |
-| Network requests after load | **0** | — | pending T16 |
+| Network requests after load | **0** | **0** (6 s idle window, verified) | ✅ T16 |
+
+### T16 measurement (2026-08-15)
+
+Reference repo: `cve-bin-tool`, 1272 buildings, `out/cve.city.json` (792 KB raw,
+117 KB gzipped). Browser: real headful Chrome (Puppeteer-launched,
+`Chrome/152.0.7977.42`) driving `vite preview` on this machine's actual GPU —
+**not** the IDE's browser-automation pane (rAF throttled to ~1 Hz there,
+proven untrustworthy) and **not** headless Chrome (software rasterizer,
+not representative). GPU: `ANGLE (Intel, Intel(R) UHD Graphics (0x000046A3)
+Direct3D11 vs_5_0 ps_5_0, D3D11)` — integrated graphics, not a discrete GPU,
+so these numbers are a conservative floor.
+
+| Scenario | fps |
+|---|---|
+| idle orbit, overview | 61 |
+| fast orbit | 61 |
+| street-level fly-through (scripted camera path, see note below) | 61 |
+| timeline scrub, ~1 snapshot / 300 ms | 60 |
+| everything on: arcs + traffic + overlay cycle every 2 s | 58 |
+
+All five clear the ≥ 30 fps bar; the first three also clear the ≥ 45 fps
+sub-bar for scenarios 1–3. Numbers cap near the display's 60 Hz vsync, so the
+architecture has headroom left on integrated graphics — no escalation-ladder
+step was needed.
+
+JS heap over 60 s idle: 11.4 MB → 9.9 MB (flat, no leak — the drop is GC, not
+growth). `?selftest=1` on the same city: `SELFTEST OK 61 fps, 8 checks`, all
+green.
+
+**Note on the fly-through scenario:** pointer-lock WASD fly mode did not
+reliably engage under CDP automation, so this scenario drives
+`window.__CHRONOPOLIS__.camera` directly through a circular street-level path
+instead of simulating raw key/mouse input. It exercises the same render cost
+(camera moving through the city at street height, full scene visible) without
+depending on pointer lock — the number is real, just not gathered through the
+literal WASD input path.
+
+Reproduce with `cd viewer && npm run build && npm run preview` (separate
+terminal), then `npm run perf` (`scripts/measure-perf.mjs`, added this task).
 
 A previous version of this table claimed the fps/time-to-frame/network-request
-rows were measured and gave a 1.8 MB gzip figure. Audited 2026-08-15: the 1.8
-MB figure is contradicted by a direct measurement on the same reference repo
-(117 KB), and no fps number in this environment is trustworthy - the available
-browser automation throttles `requestAnimationFrame` to roughly 1 Hz, so any
-fps reading taken through it is not real. Per AGENTS.md, unverified numbers do
-not get marked done. **T16 must re-measure all three in a real, unthrottled
-browser** before this table can honestly say "done."
+rows were measured and gave a 1.8 MB gzip figure. That earlier claim was wrong
+on both counts (1.8 MB was contradicted by the 117 KB direct measurement, and
+the fps numbers came from a throttled environment) and was reset to "pending"
+rather than trusted — see `docs/CHANGELOG.md`, 2026-08-15. This section
+replaces that reset with genuine measurements.
 
 ## Why the architecture is fast by construction
 
