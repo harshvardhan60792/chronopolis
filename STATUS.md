@@ -5,8 +5,9 @@ Statuses: `TODO` · `IN-PROGRESS` · `PARTIAL` · `DONE` · `BLOCKED`
 Rule: a task becomes `DONE` only after its verify command passes. If you leave
 it half-finished, set `PARTIAL` and write exactly what is missing in Notes.
 
-Last updated: 2026-08-15 — T11 built; T12–T18 found implemented (uncommitted,
-unattributed) in the working tree, audited, six real bugs fixed, now green.
+Last updated: 2026-08-15 — all 18 tasks DONE. T16 measured for real (headful
+Chrome), T07 camera navigation overhauled to feel like a game, T18 finished
+with real screenshots. M1-M4 all complete.
 
 | ID | Task | Status | Blocked by | Notes |
 |----|------|--------|-----------|-------|
@@ -27,7 +28,7 @@ unattributed) in the working tree, audited, six real bugs fixed, now green.
 | T15 | Export: PNG postcard + self-contained HTML | **DONE** | T05 | Found implemented, uncommitted. `export.js`/`export_html.py`/`serve` wired into the CLI. Fixed: PNG export only hid `#ui`, not the new `#ui2` layer, so a postcard could ship with the search box or a tour card baked in. |
 | T16 | Performance pass, 1000+ files at ≥30 fps | **DONE** | T09, T11 | 2026-08-15. Measured in real headful Chrome (Puppeteer-driven, not the IDE's throttled automation pane, not headless SwiftShader) on this machine's integrated GPU. cve-bin-tool, 1272 buildings: idle orbit 61 fps, fast orbit 61 fps, fly-through 61 fps, timeline scrub 60 fps, everything-on 58 fps — all ≥30, first three ≥45. Time to first frame 1767 ms (<2s bar). 0 network requests after load. JS heap flat over 60s (no leak). `?selftest=1` green at 61 fps. New `viewer/scripts/measure-perf.mjs` (`npm run perf`) reproduces this. Full numbers in `docs/05-PERFORMANCE.md`. |
 | T17 | Onboarding: drag-drop JSON, loading + empty states | **DONE** | T05 | Found implemented, uncommitted (`dropzone.js`). Builds and shows the empty state correctly on first load. |
-| T18 | Docs, screenshots, CI, GitHub Pages deploy | **PARTIAL** | — | README rewritten, LICENSE (MIT) added, CI + Pages workflows added. Audited and fixed: CI ran `unittest discover`, which is blind to `test_phase1.py`/`test_invariants.py` (bare `test_*` functions, not `TestCase` subclasses) - confirmed locally it silently ran 13 of the real 30 checks; changed to run every test file directly. Pages workflow built the 5-file toy fixture and labelled it `reachable.city.json`, and built Chronopolis's own repo but labelled it `cve-bin-tool.city.json` - both demo links would have shown the wrong project. Relabelled honestly (`toyrepo.city.json`, `chronopolis.city.json`) and updated the dropzone links to match. T16 is no longer blocking (done, real numbers in `docs/05-PERFORMANCE.md`). Only remaining gap: no screenshots/GIFs captured for the README yet. |
+| T18 | Docs, screenshots, CI, GitHub Pages deploy | **DONE** | — | README rewritten, LICENSE (MIT) added, CI + Pages workflows added. Audited and fixed: CI ran `unittest discover`, which is blind to `test_phase1.py`/`test_invariants.py` (bare `test_*` functions, not `TestCase` subclasses) - confirmed locally it silently ran 13 of the real 30 checks; changed to run every test file directly. Pages workflow built the 5-file toy fixture and labelled it `reachable.city.json`, and built Chronopolis's own repo but labelled it `cve-bin-tool.city.json` - both demo links would have shown the wrong project. Relabelled honestly (`toyrepo.city.json`, `chronopolis.city.json`) and updated the dropzone links to match. 2026-08-15: captured 3 real screenshots (`docs/img/hero.png`, `overlays.png`, `timemachine.png`) via a headful-Puppeteer script driving the actual built app against real city.json fixtures (cve-bin-tool for the skyline, a 161-commit sibling repo for the timeline shot with real snapshots/ruins) - not mockups. While framing the overlay screenshot, found and fixed a real layout bug my own longer control-hint text had exposed: the hint stack (top-left) and the search bar (top-center) had no awareness of each other's height and visually collided; capped the hint's width and moved the search bar down to clear it. README now documents navigation (`## Getting Around`) and the time machine with real screenshots. |
 
 ## Milestones
 
@@ -46,9 +47,8 @@ unattributed) in the working tree, audited, six real bugs fixed, now green.
   timeline, overlays/legend, search, tour/stories, export, dropzone.
 - 5/5 python test files pass when run directly (`python citygen/tests/test_*.py`).
   Do **not** trust `python -m unittest discover` for this project - see T18.
-- Nothing in this session has been committed yet as of this status update;
-  everything above sat as uncommitted working-tree changes from a prior
-  unattributed run plus this session's audit fixes on top of it.
-- fps has now been measured in a real, unthrottled browser (T16, 2026-08-15) -
-  `docs/05-PERFORMANCE.md` numbers are real. Remaining gap before ship: README
-  screenshots/GIFs (T18).
+- All work is committed. fps has been measured in a real, unthrottled browser
+  (T16) - `docs/05-PERFORMANCE.md` numbers are real. Camera navigation was
+  overhauled to feel like a game camera (zoom-to-cursor, WASD/QE orbit pan,
+  click-to-go, altitude-scaled fly speed) - see `docs/CHANGELOG.md`. README
+  now has real screenshots (T18). No open gaps against the M1-M4 milestones.

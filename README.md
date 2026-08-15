@@ -43,11 +43,31 @@ Serves the viewer locally and automatically copies your city into it.
 
 ## How to Read the City
 
+![Overlay modes and the search bar](docs/img/overlays.png)
+
 - **Height:** The number of functions/methods in the file.
 - **Footprint:** The total Lines of Code (LOC).
-- **Colour (Modes 1-6):** Use the number keys to switch the overlay. You can view by Primary Language, Health (Hotspots pulse red), Recency (cold to warm), Ownership, Bus Factor, and Complexity.
+- **Colour (Modes 1-6):** Use the number keys to switch the overlay. You can view by Primary Language, Health (hotspots rendered with a warm rim), Recency (cold to warm), Ownership, Bus Factor, and Complexity.
 - **Arcs (Press `I`):** Direct import dependencies. The arc goes from the importer to the imported file.
 - **Traffic (Press `T`):** Files that frequently change together in git history are connected by glowing traffic paths.
+
+## Getting Around
+
+Navigation is built to feel like a game camera, not a CAD viewport:
+
+- **Drag** to orbit, **scroll** to zoom toward whatever's under the cursor (not the screen center).
+- **WASD** pans the camera, **Q/E** rotates it — works in orbit mode, no mode switch needed.
+- **Double-click** open ground to fly the camera there.
+- Press **F** for a pointer-locked first-person fly mode (WASD + mouse look, Space/Shift for up/down, speed scales with altitude).
+- Press **R** to reset the view.
+
+## The Time Machine
+
+Repos with real git history (10+ commits) get a scrubbable timeline at the
+bottom of the screen: play through the repo's history, watch it grow, and see
+deleted files linger as translucent ruins before they vanish.
+
+![Timeline scrubbing through a repo's history](docs/img/timemachine.png)
 
 ## Performance
 

@@ -2,6 +2,20 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — T18 finished: real README screenshots. Captured
+  `docs/img/hero.png`, `overlays.png` and `timemachine.png` by driving the
+  actual built app with a headful-Puppeteer script against real city.json
+  fixtures - cve-bin-tool (1272 files) for the skyline shots, a 161-commit
+  sibling repo for the timeline shot so it would have genuine snapshots and
+  ruins to show, not a fabricated example. Found a real layout bug while
+  framing the overlay shot: the top-left hint stack and the top-center
+  search bar are independently positioned with no awareness of each other's
+  height, and my own longer control-hint text (from the camera nav work)
+  pushed it into the search bar's territory - capped the hint's width and
+  moved the search bar down to clear the stack. README gained a "Getting
+  Around" section documenting the new camera controls and a "The Time
+  Machine" section with a real screenshot. All 18 tasks are now DONE.
+
 - 2026-08-15 — camera navigation overhaul (T07 revisit). Scroll wheel now
   dollies toward the point under the cursor instead of the screen center
   (the Google Earth / Cities: Skylines convention); WASD/QE pan and rotate

@@ -46,7 +46,11 @@
 /* Search component */
 #search-container {
     position: absolute;
-    top: 20px;
+    /* Clears the hint/sky/arcs/traffic legend stack that lives in the
+       top-left corner (#ui) - both are top-anchored and independently
+       positioned, so a fixed offset is the simplest way to keep them from
+       overlapping. */
+    top: 230px;
     left: 50%;
     transform: translateX(-50%);
     width: 480px;
