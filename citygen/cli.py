@@ -24,9 +24,9 @@ from .walk import WalkOptions
 def _use_color() -> bool:
     return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
 
-
 def _style(code: str, text: str, enabled: bool) -> str:
     return f"\033[{code}m{text}\033[0m" if enabled else text
+
 
 
 def _cmd_build(a: argparse.Namespace) -> int:
@@ -256,6 +256,83 @@ def _cmd_impact(a: argparse.Namespace) -> int:
 
     return 0
 
+def _cmd_risk(a: argparse.Namespace) -> int:
+    import sys
+    from .risk import score_all, score_paths, staged_paths
+
+    if not os.path.exists(a.city):
+        print(f"no city at {a.city} — run: python -m citygen build . -o {a.city}", file=sys.stderr)
+        return 2
+
+    city = _load(a.city)
+
+    if a.staged and a.paths:
+        print("error: --staged and paths are mutually exclusive", file=sys.stderr)
+        return 2
+
+    if a.staged:
+        repo_path = city.get("repo", {}).get("path", ".")
+        paths = staged_paths(repo_path)
+        if not paths:
+            print("Nothing staged.")
+            return 0
+        scored = score_paths(city, paths)
+    elif a.paths:
+        scored = score_paths(city, a.paths)
+    else:
+        scored = score_all(city)
+        scored.sort(key=lambda s: s["score"] if s["score"] is not None else -1.0, reverse=True)
+        scored = scored[:a.top]
+
+    if a.json:
+        import json
+        print(json.dumps(scored, indent=2))
+        return 0
+
+    if not a.staged and not a.paths:
+        print(f"Riskiest files in {city.get('repo', {}).get('name', 'repo')}\n")
+
+    color = _use_color()
+    bold = lambda t: _style("1", t, color)
+    red = lambda t: _style("31", t, color)
+    yellow = lambda t: _style("33", t, color)
+
+    for i, s in enumerate(scored):
+        prefix = f"{i+1}. " if a.staged else "  "
+        score = s["score"]
+        band = s["band"]
+        
+        if score is None:
+            score_str = "None"
+            band_styled = band
+        else:
+            score_str = f"{score:.2f}"
+            if band == "high":
+                band_styled = red(band)
+            elif band == "moderate":
+                band_styled = yellow(band)
+            else:
+                band_styled = band
+
+        band_padded = band_styled + " " * max(0, 8 - len(band))
+        
+        if a.staged:
+            print(f"{i+1}. {score_str:>4}  {band_padded}  {s['path']}")
+        else:
+            print(f"  {score_str:>4}  {band_padded}  {s['path']}")
+            
+        for reason in s["reasons"]:
+            print(f"        {reason}")
+        print()
+
+    if a.fail_over is not None:
+        failed = [s for s in scored if s["score"] is not None and s["score"] > a.fail_over]
+        if failed:
+            print(f"error: {len(failed)} files exceed risk threshold {a.fail_over}", file=sys.stderr)
+            return 1
+
+    return 0
+
 
 def _cmd_export(a: argparse.Namespace) -> int:
     from .export_html import export_html
@@ -347,6 +424,19 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("json_path", nargs="?", help="Path to city.json to serve")
     s.add_argument("--port", type=int, default=8000, help="Port to serve on")
     s.set_defaults(func=_cmd_serve)
+
+    r = sub.add_parser("risk", help="which files are dangerous to change?")
+    r.add_argument("paths", nargs="*",
+                   help="files to score (default: whole repo, top N)")
+    r.add_argument("--city", default="out/city.json")
+    r.add_argument("--staged", action="store_true",
+                   help="score the files staged in git right now")
+    r.add_argument("--top", type=int, default=10,
+                   help="how many files to list in whole-repo mode")
+    r.add_argument("--json", action="store_true")
+    r.add_argument("--fail-over", type=float, default=None, metavar="SCORE",
+                   help="exit 1 if any scored file is riskier than SCORE (for CI)")
+    r.set_defaults(func=_cmd_risk)
 
     a = p.parse_args(argv)
     return a.func(a)

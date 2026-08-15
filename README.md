@@ -44,6 +44,14 @@ Serves the viewer locally and automatically copies your city into it.
 `python -m citygen impact <file>`
 Reports the blast radius of a file: what other files in the repository depend on it, directly and transitively. Use `--tree` to see the full dependency chain, or `--json` for CI integration.
 
+`python -m citygen risk`
+Evaluates which files are most dangerous to change based on a composite of blast radius, ownership risk (bus factor), staleness, complexity, and churn.
+- `[paths...]`: Specific files to score.
+- `--staged`: Score only the files currently staged in git.
+- `--top <N>`: List the top N riskiest files (default 10).
+- `--fail-over <SCORE>`: Exit with an error if any scored file exceeds the given risk threshold (e.g. 0.70 for high risk).
+- `--json`: Machine-readable output.
+
 ## How to Read the City
 
 ![Overlay modes and the search bar](docs/img/overlays.png)
