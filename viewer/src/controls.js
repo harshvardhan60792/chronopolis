@@ -3,8 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { updateUIForMode } from './ui.js';
 
 export function setupControls(camera, renderer, worldWidth) {
-    let mode = 'orbit'; 
-    
+    let mode = 'orbit';
+
     const orbit = new OrbitControls(camera, renderer.domElement);
     orbit.enableDamping = true;
     orbit.dampingFactor = 0.08;
@@ -12,16 +12,31 @@ export function setupControls(camera, renderer, worldWidth) {
     orbit.maxDistance = worldWidth * 2;
     orbit.maxPolarAngle = 1.52;
     orbit.target.set(worldWidth / 2, 0, worldWidth / 2);
-    
+    // Zoom is handled manually below (dolly-to-cursor, like Google Earth /
+    // Cities: Skylines) instead of OrbitControls' default zoom-to-target-line.
+    orbit.enableZoom = false;
+
     const defaultPos = camera.position.clone();
     const defaultTarget = orbit.target.clone();
-    
+
     let yaw = 0;
     let pitch = 0;
     const velocity = new THREE.Vector3();
-    const keys = { w: false, a: false, s: false, d: false, ' ': false, shift: false, ctrl: false };
-    
+    const keys = { w: false, a: false, s: false, d: false, q: false, e: false, ' ': false, shift: false, ctrl: false };
+
     const baseSpeed = (worldWidth / 200) * 40;
+
+    // Ground-plane raycast, used by dolly-to-cursor zoom and double-click-to-go.
+    const raycaster = new THREE.Raycaster();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const ndc = new THREE.Vector2();
+    function groundHit(clientX, clientY) {
+        ndc.x = (clientX / window.innerWidth) * 2 - 1;
+        ndc.y = -(clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(ndc, camera);
+        const pt = new THREE.Vector3();
+        return raycaster.ray.intersectPlane(groundPlane, pt) ? pt : null;
+    }
     
     function onMouseMove(e) {
         if (mode !== 'fly' || document.pointerLockElement !== renderer.domElement) return;
@@ -67,24 +82,43 @@ export function setupControls(camera, renderer, worldWidth) {
         }
     });
     
-    function toggleMode() {
-        mode = mode === 'orbit' ? 'fly' : 'orbit';
+    function enterFly() {
+        mode = 'fly';
         updateUIForMode(mode);
-        if (mode === 'fly') {
-            orbit.enabled = false;
-            const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-            yaw = euler.y;
-            pitch = euler.x;
-            renderer.domElement.requestPointerLock();
+        orbit.enabled = false;
+        const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+        yaw = euler.y;
+        pitch = euler.x;
+        renderer.domElement.requestPointerLock();
+    }
+
+    function exitFly() {
+        mode = 'orbit';
+        updateUIForMode(mode);
+        orbit.enabled = true;
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        orbit.target.copy(camera.position).add(dir.multiplyScalar(50));
+    }
+
+    function toggleMode() {
+        if (mode === 'orbit') {
+            enterFly();
         } else {
             document.exitPointerLock();
-            orbit.enabled = true;
-            const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            const dist = 50;
-            orbit.target.copy(camera.position).add(dir.multiplyScalar(dist));
+            exitFly();
         }
     }
-    
+
+    // The browser can drop pointer lock on its own (Escape, alt-tab, a
+    // permission prompt) without us calling exitPointerLock() first. If we
+    // don't notice, `mode` stays 'fly' forever: WASD goes dead, the hint
+    // still reads "fly", and there is no way back in except pressing F blind.
+    document.addEventListener('pointerlockchange', () => {
+        if (mode === 'fly' && document.pointerLockElement !== renderer.domElement) {
+            exitFly();
+        }
+    });
+
     let activeTween = null;
     
     function easeInOutCubic(x) {
@@ -111,13 +145,46 @@ export function setupControls(camera, renderer, worldWidth) {
     }
     
     renderer.domElement.addEventListener('pointerdown', () => activeTween = null);
-    renderer.domElement.addEventListener('wheel', () => activeTween = null);
+
+    // Dolly toward whatever is under the cursor, not the orbit target - the
+    // zoom behaviour every map/city tool (Google Earth, Cities: Skylines)
+    // uses because zooming toward screen-center feels wrong the moment your
+    // mouse isn't centered.
+    renderer.domElement.addEventListener('wheel', (e) => {
+        activeTween = null;
+        if (mode !== 'orbit') return;
+        e.preventDefault();
+
+        const dist = camera.position.distanceTo(orbit.target);
+        const factor = e.deltaY < 0 ? 0.88 : 1 / 0.88;
+        let newDist = dist * factor;
+        newDist = Math.max(orbit.minDistance, Math.min(orbit.maxDistance, newDist));
+        const clampedFactor = newDist / dist;
+        if (clampedFactor === 1) return;
+
+        const hit = groundHit(e.clientX, e.clientY) || orbit.target;
+        const shift = 1 - clampedFactor;
+        camera.position.lerp(hit, shift);
+        orbit.target.lerp(hit, shift);
+    }, { passive: false });
+
+    // Double-click open ground to fly the camera there - click-to-navigate,
+    // the same shortcut RTS/city-builder cameras use.
+    renderer.domElement.addEventListener('dblclick', (e) => {
+        if (mode !== 'orbit') return;
+        const hit = groundHit(e.clientX, e.clientY);
+        if (hit) flyTo(hit, camera.position.distanceTo(orbit.target) * 0.55, 650);
+    });
     
     let lastTime = performance.now();
     
     function update() {
         const now = performance.now();
-        const dt = (now - lastTime) / 1000;
+        // Clamp dt: a backgrounded tab or a stalled rAF (also how this
+        // project's browser-automation pane behaves - see T16 notes) can
+        // make the next frame's dt huge, which would otherwise teleport the
+        // camera the instant a movement key is held.
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
         
         if (activeTween) {
@@ -146,6 +213,32 @@ export function setupControls(camera, renderer, worldWidth) {
         }
         
         if (mode === 'orbit') {
+            // WASD/QE pan and rotate the orbit camera too, RTS-style, on top
+            // of drag-to-orbit - so keyboard-only navigation works without
+            // switching into fly mode. Pan speed scales with current zoom
+            // distance so it covers ground at a consistent screen-space rate
+            // whether zoomed in on one building or looking at the whole city.
+            const dir = new THREE.Vector3();
+            if (keys.w) dir.z -= 1;
+            if (keys.s) dir.z += 1;
+            if (keys.a) dir.x -= 1;
+            if (keys.d) dir.x += 1;
+            if (dir.lengthSq() > 0) {
+                dir.normalize();
+                dir.applyQuaternion(camera.quaternion);
+                dir.y = 0;
+                dir.normalize();
+                const dist = camera.position.distanceTo(orbit.target);
+                dir.multiplyScalar(dist * 1.1 * dt * (keys.shift ? 2.5 : 1));
+                camera.position.add(dir);
+                orbit.target.add(dir);
+            }
+            if (keys.q || keys.e) {
+                const angle = (keys.q ? 1 : -1) * dt * 1.6;
+                const offset = new THREE.Vector3().subVectors(camera.position, orbit.target);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                camera.position.copy(orbit.target).add(offset);
+            }
             orbit.update();
         } else if (mode === 'fly' && document.pointerLockElement === renderer.domElement) {
             const dir = new THREE.Vector3();
@@ -153,10 +246,14 @@ export function setupControls(camera, renderer, worldWidth) {
             if (keys.s) dir.z += 1;
             if (keys.a) dir.x -= 1;
             if (keys.d) dir.x += 1;
-            
-            let speed = baseSpeed * dt * 60;
-            if (keys.shift) speed *= keys.w ? 3 : 1; 
-            if (keys.ctrl) speed *= 0.3; 
+
+            // Speed scales with altitude, same as creative-flight in Google
+            // Earth/Minecraft: crawl near street level where precision
+            // matters, cover ground fast up high where it doesn't.
+            const heightFactor = Math.max(0.35, Math.min(5, camera.position.y / 15));
+            let speed = baseSpeed * heightFactor * dt * 60;
+            if (keys.shift) speed *= keys.w ? 3 : 1;
+            if (keys.ctrl) speed *= 0.3;
             
             dir.normalize();
             dir.applyQuaternion(camera.quaternion);

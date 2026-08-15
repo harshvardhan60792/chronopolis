@@ -2,6 +2,21 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — camera navigation overhaul (T07 revisit). Scroll wheel now
+  dollies toward the point under the cursor instead of the screen center
+  (the Google Earth / Cities: Skylines convention); WASD/QE pan and rotate
+  the orbit camera too, not just fly mode, with pan speed scaled to current
+  zoom distance; double-click on open ground flies the camera there;
+  fly-mode speed now scales with altitude, crawling near street level and
+  covering ground fast up high. Fixed two real bugs found while building
+  this: pointer lock can be dropped by the browser itself (Escape, alt-tab)
+  without the app calling `exitPointerLock()` first, which left `mode`
+  wedged on 'fly' with dead WASD and a stale hint forever - added a
+  `pointerlockchange` listener that self-heals back to orbit; and an
+  unclamped per-frame `dt` could produce a huge single step (camera
+  teleport) after any stall, including a backgrounded tab in a real browser
+  - clamped to 100ms.
+
 - 2026-08-15 — T16 (performance pass) measured for real. Added
   `viewer/scripts/measure-perf.mjs` (`npm run perf`): headful Puppeteer Chrome
   driving the built preview, chosen specifically to avoid the two traps that

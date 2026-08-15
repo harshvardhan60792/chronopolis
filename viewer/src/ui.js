@@ -2,7 +2,7 @@ export function initUI() {
     const ui = document.getElementById('ui');
     ui.innerHTML = `
         <div id="controls-hint" style="background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 4px; transition: opacity 0.3s; font-size: 13px;">
-            <span id="hint-orbit">drag orbit · scroll zoom · F fly · K sky · B bloom · I arcs · T traffic · space history</span>
+            <span id="hint-orbit">drag orbit · WASD/QE move+turn · scroll zoom to cursor · dblclick go here · F fly · K sky · B bloom · I arcs · T traffic · space history</span>
             <span id="hint-fly" class="hidden">WASD move · mouse look · Space/Shift up-down · F exit · K sky · I arcs · T traffic</span>
         </div>
         <div id="sky-legend" class="legend" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
