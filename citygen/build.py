@@ -21,8 +21,8 @@ from .gitmine import (apply_history, last_commit_ts, read_history,
 from .coupling import calculate_cochange
 from .layout import generate_layout
 from .metrics import (curly_complexity, generic_metrics, go_metrics,
-                      js_metrics, python_metrics)
-from .resolve import JsModuleIndex, ModuleIndex
+                      js_metrics, python_metrics, ruby_metrics)
+from .resolve import JsModuleIndex, ModuleIndex, RubyModuleIndex
 from .snapshots import compute_snapshots
 from .stories import generate_stories
 from .walk import (EXT_LANG, FileRec, WalkOptions, is_source_path, read_text,
@@ -113,6 +113,9 @@ def build_city(root: str, opts: WalkOptions | None = None,
     js_paths = [f.rel for f in files if f.lang in JS_LANGS]
     js_index = JsModuleIndex(js_paths)
 
+    rb_paths = [f.rel for f in files if f.lang == "ruby"]
+    rb_index = RubyModuleIndex(rb_paths)
+
     # Complexity/function heuristics only - no import resolution attempted
     # for these (no reserved-word marker to find declarations by, and each
     # language's module system is different enough that faking edges would
@@ -125,6 +128,7 @@ def build_city(root: str, opts: WalkOptions | None = None,
     # re-sorted, so any index captured during this pass would be wrong.
     pending_imports: list[tuple[str, list]] = []
     pending_imports_js: list[tuple[str, list[str]]] = []
+    pending_imports_rb: list[tuple[str, list[tuple[str, bool]]]] = []
 
     for f in files:
         text = read_text(f.abs)
@@ -179,6 +183,13 @@ def build_city(root: str, opts: WalkOptions | None = None,
             b["complexity"] = gr.complexity
         elif f.lang in CURLY_LANGS:
             b["complexity"] = curly_complexity(text)
+        elif f.lang == "ruby":
+            rr = ruby_metrics(text)
+            b["parsed"] = True
+            b["functions"] = rr.functions
+            b["classes"] = rr.classes
+            b["complexity"] = rr.complexity
+            pending_imports_rb.append((f.rel, rr.imports))
         buildings.append(b)
 
     # ---- git history, and the ruins it reveals ------------------------------
@@ -254,6 +265,20 @@ def build_city(root: str, opts: WalkOptions | None = None,
         seen_ext = 0
         for spec in specs:
             target = js_index.resolve(spec, rel)
+            if target is None:
+                seen_ext += 1
+                continue
+            tj = by_path.get(target)
+            if tj is None or tj == bi:
+                continue
+            edge_w[(bi, tj)] = edge_w.get((bi, tj), 0) + 1
+        buildings[bi]["ext_imports"] = seen_ext
+
+    for rel, specs in pending_imports_rb:
+        bi = by_path[rel]
+        seen_ext = 0
+        for spec, is_relative in specs:
+            target = rb_index.resolve_relative(spec, rel) if is_relative else rb_index.resolve_require(spec)
             if target is None:
                 seen_ext += 1
                 continue

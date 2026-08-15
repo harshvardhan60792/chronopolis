@@ -140,3 +140,43 @@ class JsModuleIndex:
                 if hit in self.paths:
                     return hit
         return None
+
+
+_RUBY_ROOT_PREFIXES = ("lib/", "app/")
+
+
+class RubyModuleIndex:
+    """Resolves `require_relative` (path-relative) and `require` (load-path
+    style) specifiers to repo-relative file paths.
+
+    `require 'foo/bar'` names a load-path-relative file, not a real repo
+    path - the convention (gems and Rails apps alike) is that `lib/` and
+    `app/` are on the load path, so `lib/foo/bar.rb` is reachable as
+    `foo/bar`. That convention is attempted on a best-effort basis, same as
+    ModuleIndex strips src/lib/python/ for Python's own src-layout. Anything
+    that doesn't resolve is a gem, exactly as an unresolved Python or JS
+    specifier is treated as third-party.
+    """
+
+    def __init__(self, rb_paths: list[str]):
+        self.paths = set(rb_paths)
+        self.by_require: dict[str, str] = {}
+        for p in rb_paths:
+            noext = p[:-3] if p.endswith(".rb") else p
+            # first writer wins, and paths are pre-sorted => deterministic
+            self.by_require.setdefault(noext, p)
+            for pref in _RUBY_ROOT_PREFIXES:
+                if noext.startswith(pref):
+                    self.by_require.setdefault(noext[len(pref):], p)
+
+    def resolve_relative(self, spec: str, from_file: str) -> str | None:
+        base = os.path.dirname(from_file)
+        joined = os.path.normpath(os.path.join(base, spec)).replace("\\", "/")
+        for suffix in ("", ".rb"):
+            candidate = joined + suffix
+            if candidate in self.paths:
+                return candidate
+        return None
+
+    def resolve_require(self, spec: str) -> str | None:
+        return self.by_require.get(spec)

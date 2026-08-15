@@ -2,6 +2,27 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — Ruby support (T01 revisit, continued again). Added
+  `metrics.ruby_metrics` + `resolve.RubyModuleIndex`. Ruby's `def`/`class`/
+  `module` are reserved words, so - unlike the C-family languages just
+  added - functions and classes can be counted with the same confidence as
+  the JS/Go tiers, not just complexity. Import resolution handles both
+  Ruby require mechanisms: `require_relative` is a path-relative specifier,
+  resolved the same way as JS's relative imports; plain `require 'foo/bar'`
+  is resolved on a best-effort basis against `lib/`/`app/` load-path roots
+  (the convention every gem and Rails app follows), the same root-prefix
+  strip `ModuleIndex` already does for Python's src-layout. Anything that
+  doesn't resolve either way is treated as a gem, exactly as an unresolved
+  Python or JS specifier is treated as third-party. Verified on
+  `sinatra/sinatra`: 0 -> 905 functions, 0 -> 91 import edges. Spot-checked
+  `lib/sinatra/base.rb` (197 functions, 29 classes, complexity 432 across
+  2173 lines - plausible for Sinatra's large core file) and confirmed both
+  require mechanisms resolve correctly, including a plain
+  `require 'sinatra/base'` from `sinatra-contrib/` resolving through the
+  `lib/` root-prefix strip. `?selftest=1` green, zero bad fields. README's
+  Limitations section gained a Ruby entry and dropped Ruby from the
+  LOC-only bucket.
+
 - 2026-08-15 — wider language coverage (T01 revisit, continued). Tested 5
   more real GitHub repos: spf13/cobra (Go), sharkdp/fd (Rust), google/gson
   (Java), sinatra/sinatra (Ruby), nlohmann/json (C++). No crashes on any of

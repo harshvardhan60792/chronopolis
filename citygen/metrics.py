@@ -247,3 +247,39 @@ _CURLY_DECISION_RE = re.compile(
 
 def curly_complexity(text: str) -> int:
     return 1 + len(_CURLY_DECISION_RE.findall(text))
+
+
+@dataclass
+class RubyResult:
+    functions: int = 0
+    classes: int = 0
+    complexity: int = 1
+    # (spec, is_relative). `require_relative` is always a same-repo path;
+    # plain `require` is usually a gem, but idiomatic Ruby also uses it for
+    # intra-project files reachable via a lib/app load-path root, so it is
+    # still worth an attempted resolution - same split resolve.py makes.
+    imports: list[tuple[str, bool]] = field(default_factory=list)
+
+
+# `def name`, `def self.name`, `def name?`/`name!`/`name=` - `def` is a
+# reserved word, so (like Go's `func`) this is a reliable method count.
+_RUBY_DEF_RE = re.compile(r'\bdef\s+(?:self\.)?[A-Za-z_]\w*[?!=]?')
+_RUBY_CLASS_RE = re.compile(r'\b(?:class|module)\s+[A-Za-z_][\w:]*')
+# Ruby has no braces, so `if`/`unless`/`while`/`until` etc. are themselves
+# the block delimiters, not just a heuristic proxy for one.
+_RUBY_DECISION_RE = re.compile(
+    r'\b(?:if|elsif|unless|while|until|case|when|rescue|and|or)\b|&&|\|\|'
+)
+_RUBY_REQUIRE_RELATIVE_RE = re.compile(r'''\brequire_relative\s+['"]([^'"]+)['"]''')
+# Deliberately after the relative regex and written so it cannot also match
+# inside "require_relative" (no whitespace follows "require" there).
+_RUBY_REQUIRE_RE = re.compile(r'''\brequire\s+['"]([^'"]+)['"]''')
+
+
+def ruby_metrics(text: str) -> RubyResult:
+    functions = len(_RUBY_DEF_RE.findall(text))
+    classes = len(_RUBY_CLASS_RE.findall(text))
+    complexity = 1 + len(_RUBY_DECISION_RE.findall(text))
+    imports = [(m, True) for m in _RUBY_REQUIRE_RELATIVE_RE.findall(text)]
+    imports += [(m, False) for m in _RUBY_REQUIRE_RE.findall(text)]
+    return RubyResult(functions=functions, classes=classes, complexity=complexity, imports=imports)

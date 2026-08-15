@@ -81,9 +81,10 @@ reproduction steps in `docs/05-PERFORMANCE.md`.
 
 - **Deep Parsing:** Abstract Syntax Tree (AST) deep parsing is Python-only. Three other tiers, by regex heuristic, none of them a real parser (comments/strings aren't stripped, so `// if (x)` in a comment counts):
   - **JavaScript/TypeScript** — functions, complexity, and import arcs, including resolving `./foo.js` specifiers to `foo.ts` (the ESM-in-TS convention).
+  - **Ruby** — functions, complexity, and import arcs from `require`/`require_relative`. `require 'foo/bar'` is resolved on a best-effort basis against `lib/`/`app/` load-path roots (the gem and Rails convention); unresolved requires are treated as gems, the same split Python/JS make for third-party imports.
   - **Go** — functions and complexity (`func` is a reserved word, so this is nearly as reliable as JS). No import arcs — Go's import paths need `go.mod` to resolve correctly, which isn't parsed.
   - **Java, C#, C/C++, PHP, Kotlin, Swift, Rust** — complexity only, from reserved decision-point keywords (`if`/`for`/`while`/`switch`/`catch`/`match`). No function count: none of these languages has a keyword marking a declaration, so a regex can't tell a method from an `if` block without guessing — better to show nothing than a number that looks precise and isn't. No import arcs either.
-  - Every other language (Ruby, shell, etc.) gets LOC/SLOC/TODO counts only: complexity stays flat at 1, no function count, no import arcs.
+  - Every other language (shell, etc.) gets LOC/SLOC/TODO counts only: complexity stays flat at 1, no function count, no import arcs.
 - **History Approximation:** We capture git snapshots, not every single commit line-by-line, to keep the analysis under 10 seconds.
 - **Ownership:** "Bus factor" and "Ownership" are calculated based on commit counts to a file, not precise blame-based line ownership.
 
