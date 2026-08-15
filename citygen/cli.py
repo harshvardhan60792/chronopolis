@@ -148,6 +148,115 @@ def _cmd_inspect(a: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_impact(a: argparse.Namespace) -> int:
+    import os
+    if not os.path.exists(a.city):
+        print(f"no city at {a.city} — run: python -m citygen build . -o {a.city}", file=sys.stderr)
+        return 2
+
+    city = _load(a.city)
+    
+    from .impact import build_reverse_index, blast_radius, resolve_target
+    
+    try:
+        start_idx = resolve_target(city, a.file)
+    except LookupError as e:
+        if os.path.exists(a.file):
+            print("citygen skipped this file during build (vendored/oversized/binary)", file=sys.stderr)
+            return 2
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
+    b = city["buildings"][start_idx]
+    import_edges = city.get("edges", {}).get("import", [])
+    n = len(city["buildings"])
+    
+    rev = build_reverse_index(import_edges, n)
+    result = blast_radius(rev, start_idx, a.depth)
+    
+    color = _use_color()
+    bold = lambda t: _style("1", t, color)
+    
+    direct_count = len(result["direct"])
+    trans_count = len(result["all"])
+    
+    resolution = "full" if b.get("lang") in ("python", "javascript", "typescript", "ruby") else "none"
+    
+    if a.json:
+        out = {
+            "file": b["path"],
+            "index": start_idx,
+            "direct": [city["buildings"][i]["path"] for i in result["direct"]],
+            "transitive": [city["buildings"][i]["path"] for i in result["all"]],
+            "depths": {str(d): [city["buildings"][i]["path"] for i in sorted(deps)] for d, deps in result["depths"].items()},
+            "counts": {
+                "direct": direct_count,
+                "transitive": trans_count,
+                "max_depth": max(result["depths"].keys()) if result["depths"] else 0
+            },
+            "signals": {},
+            "import_resolution": resolution,
+            "truncated": result["truncated"]
+        }
+        for k in ["bus_factor", "owner_share", "stale_days", "complexity", "loc"]:
+            if k in b:
+                out["signals"][k] = b[k]
+        
+        print(json.dumps(out, indent=2))
+        return 0
+
+    print(bold(b["path"]))
+    print()
+    print(f"  Direct dependents        {direct_count}")
+    print(f"  Transitive dependents    {trans_count}")
+    if result["depths"]:
+        max_d = max(result["depths"].keys())
+        print(f"  Depth                    {max_d} level{'s' if max_d > 1 else ''}")
+    else:
+        print("  Depth                    0 levels")
+    print()
+
+    has_git = city.get("repo", {}).get("has_git", True)
+    
+    if not has_git:
+        print("  Risk signals (no git history in this city)")
+        if "complexity" in b:
+            print(f"    complexity             {b['complexity']}")
+        print()
+    else:
+        if any(k in b for k in ("bus_factor", "stale_days", "complexity")):
+            print("  Risk signals")
+            if "bus_factor" in b:
+                commits = b.get("commits", 0)
+                share = b.get("owner_share", 0.0) * 100
+                print(f"    bus factor             {b['bus_factor']}  (harsh, {share:.0f}% of {commits} commits)")
+            if "stale_days" in b:
+                print(f"    last touched           {b['stale_days']} days ago")
+            if "complexity" in b:
+                print(f"    complexity             {b['complexity']}")
+            print()
+
+    if trans_count == 0:
+        print(f"No file in this repo imports {b['path']}.")
+        if resolution == "none":
+            lang_val = b.get('lang', 'unknown')
+            print(f"Note: import arcs are not resolved for {lang_val} — this is \"no data\", not \"no dependents\".")
+        return 0
+
+    for d in sorted(result["depths"].keys()):
+        deps = result["depths"][d]
+        print(f"  Depth {d}  ({len(deps)} file{'s' if len(deps) > 1 else ''})")
+        
+        show = deps if a.tree else deps[:15]
+        for i in show:
+            print(f"    {city['buildings'][i]['path']}")
+        
+        if not a.tree and len(deps) > 15:
+            print(f"    ... and {len(deps) - 15} more")
+
+    return 0
+
+
 def _cmd_export(a: argparse.Namespace) -> int:
     from .export_html import export_html
     try:
@@ -217,6 +326,17 @@ def main(argv: list[str] | None = None) -> int:
     i = sub.add_parser("inspect", help="print a summary of a city.json")
     i.add_argument("city")
     i.set_defaults(func=_cmd_inspect)
+
+    im = sub.add_parser("impact", help="what breaks if I change this file?")
+    im.add_argument("file", help="path to a file in the analysed repo")
+    im.add_argument("--city", default="out/city.json",
+                    help="path to city.json (default: out/city.json)")
+    im.add_argument("--depth", type=int, default=None,
+                    help="stop after N levels of dependents")
+    im.add_argument("--json", action="store_true", help="machine-readable output")
+    im.add_argument("--tree", action="store_true",
+                    help="print the dependency tree, not just counts")
+    im.set_defaults(func=_cmd_impact)
 
     e = sub.add_parser("export", help="Export city JSON as a self-contained HTML file")
     e.add_argument("json_path", help="Path to the input city.json")

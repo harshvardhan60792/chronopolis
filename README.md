@@ -41,6 +41,9 @@ Generates a zero-dependency, self-contained HTML file from your `city.json` that
 `python -m citygen serve <json>`
 Serves the viewer locally and automatically copies your city into it.
 
+`python -m citygen impact <file>`
+Reports the blast radius of a file: what other files in the repository depend on it, directly and transitively. Use `--tree` to see the full dependency chain, or `--json` for CI integration.
+
 ## How to Read the City
 
 ![Overlay modes and the search bar](docs/img/overlays.png)
