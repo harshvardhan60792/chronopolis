@@ -21,6 +21,14 @@ from .export_html import export_html
 from .walk import WalkOptions
 
 
+def _use_color() -> bool:
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def _style(code: str, text: str, enabled: bool) -> str:
+    return f"\033[{code}m{text}\033[0m" if enabled else text
+
+
 def _cmd_build(a: argparse.Namespace) -> int:
     if not os.path.isdir(a.repo):
         print(f"error: not a directory: {a.repo}", file=sys.stderr)
@@ -57,7 +65,12 @@ def _cmd_build(a: argparse.Namespace) -> int:
 
     s = city["stats"]
     size = os.path.getsize(out)
-    print(f"[citygen] {city['repo']['name']}: {s['files']} files, "
+    color = _use_color()
+    bold = lambda t: _style("1", t, color)
+    green = lambda t: _style("32;1", t, color)
+    dim = lambda t: _style("2", t, color)
+
+    print(f"[citygen] {bold(city['repo']['name'])}: {s['files']} files, "
           f"{s['loc']:,} LOC, {s['functions']} fns, "
           f"{s['import_edges']} import edges, {s['parse_errors']} parse errors")
     snaps = city.get("snapshots")
@@ -65,7 +78,14 @@ def _cmd_build(a: argparse.Namespace) -> int:
         ruins = sum(1 for b in city["buildings"] if b.get("deleted"))
         print(f"[citygen] timeline: {snaps['count']} snapshots "
               f"{snaps['labels'][0]} -> {snaps['labels'][-1]}, {ruins} ruins")
-    print(f"[citygen] wrote {out} ({size/1024:.1f} KB) in {dt:.2f}s")
+    # Plain ASCII, not a unicode checkmark: Windows' default console codepage
+    # (cp1252/cp437) crashes on print() for characters outside it, and this
+    # is a stdlib-only, no-dependency CLI that has to work in that terminal
+    # unmodified (ADR-006).
+    building_count = f"{len(city['buildings']):,} buildings"
+    print(f"{green('OK')} built {bold(building_count)} "
+          f"in {dt:.2f}s -> {dim(out)} ({size/1024:.1f} KB)")
+    print(f"  {dim('next:')} python -m citygen serve {out}")
     return 0
 
 

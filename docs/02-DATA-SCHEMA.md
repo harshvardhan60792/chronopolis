@@ -28,7 +28,8 @@ Keys marked ✅ are emitted today by T01. Keys marked ⏳ are emitted as
     "files": 39, "dirs": 11, "loc": 5286, "sloc": 4300,
     "functions": 222, "classes": 13, "complexity": 920,
     "python_files": 20, "import_edges": 37, "parse_errors": 0,
-    "langs": { "python": 20, "docs": 12 }
+    "langs": { "python": 20, "docs": 12 },
+    "avg_health": 0.18                      // mean of buildings[].health; drives weather.js rain
   },
 
   "tree": [                                 // ✅ districts, sorted by path

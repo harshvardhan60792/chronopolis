@@ -1,0 +1,80 @@
+name: PR Preview
+
+# Builds this PR's own repo state into a Chronopolis city and uploads a
+# self-contained HTML export as a workflow artifact, so a reviewer can
+# download one file and open it in a browser - no server, no CLI - to see
+# the 3D shape of the codebase the PR just changed.
+#
+# This is also the reference implementation for adopting Chronopolis in any
+# other repo's CI: copy this file, drop it in .github/workflows/, done.
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Build city.json for this PR's checkout
+      # --max-commits bounds this against a repo with an enormous history -
+      # CI time should stay predictable regardless of what's being scanned.
+      run: python -m citygen build . -o out/pr-preview.city.json --max-commits 500
+
+    - name: Export self-contained HTML
+      run: python -m citygen export out/pr-preview.city.json -o out/pr-preview.html
+
+    - name: Upload preview artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chronopolis-preview
+        path: |
+          out/pr-preview.city.json
+          out/pr-preview.html
+        retention-days: 14
+
+    - name: Comment on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const marker = '<!-- chronopolis-pr-preview -->';
+          const body = [
+            marker,
+            '**Chronopolis preview built for this PR.**',
+            '',
+            `Download \`pr-preview.html\` from the [workflow run artifacts](${runUrl}) and open it directly in a browser - no server needed.`,
+          ].join('\n');
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find(c => c.body && c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }

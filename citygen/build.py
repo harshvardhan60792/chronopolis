@@ -357,6 +357,11 @@ def build_city(root: str, opts: WalkOptions | None = None,
     }
     
     calculate_health(buildings)
+    # A single repo-level mood cue (viewer/src/weather.js: rain density),
+    # not a per-file signal - just the mean of the same composite score the
+    # Health overlay colours buildings by.
+    stats["avg_health"] = (round(sum(b["health"] for b in buildings) / len(buildings), 4)
+                           if buildings else 0.0)
 
     # Footprints are sized by the largest the file ever was, not by what
     # survives today. That is what keeps a building's plot fixed while the

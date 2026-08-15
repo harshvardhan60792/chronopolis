@@ -58,8 +58,11 @@ Navigation is built to feel like a game camera, not a CAD viewport:
 - **Drag** to orbit, **scroll** to zoom toward whatever's under the cursor (not the screen center).
 - **WASD** pans the camera, **Q/E** rotates it — works in orbit mode, no mode switch needed.
 - **Double-click** open ground to fly the camera there.
-- Press **F** for a pointer-locked first-person fly mode (WASD + mouse look, Space/Shift for up/down, speed scales with altitude).
+- Press **F** for a pointer-locked first-person fly mode (WASD + mouse look, Space/Shift for up/down, speed scales with altitude). Buildings are solid — you slide along a wall instead of clipping through it.
 - Press **R** to reset the view.
+- Leave it alone for 20 seconds and the camera drifts, barely perceptibly, around the skyline — restorative "soft fascination," not a lure. Touch anything and it stops.
+
+Repos with a rougher average health (churn, complexity, single ownership, staleness — the same composite the Health overlay colours by) get a light rain; a calm repo gets a clear sky. No thunder, no flashing — a mood cue, not a storm.
 
 ## The Time Machine
 
@@ -68,6 +71,14 @@ bottom of the screen: play through the repo's history, watch it grow, and see
 deleted files linger as translucent ruins before they vanish.
 
 ![Timeline scrubbing through a repo's history](docs/img/timemachine.png)
+
+## CI Integration
+
+`.github/workflows/pr-preview.yml` builds every PR's own checkout into a
+city and uploads a self-contained HTML export as a workflow artifact, with a
+comment linking to it — a reviewer downloads one file and opens it in a
+browser, no server needed. Copy that file into any repo's
+`.github/workflows/` to add the same preview there.
 
 ## Performance
 

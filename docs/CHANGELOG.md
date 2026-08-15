@@ -2,6 +2,45 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — growth-playbook build-out. Triaged `docs/GROWTH_PLAYBOOK.md`'s
+  "Casino & Mall Framework" section (manipulative dark-pattern engagement
+  tactics, e.g. forced disorientation, loot-box-style unpredictable
+  discovery) against ADR-012 and kept it rejected; the section's genuinely
+  good ideas (instant hover feedback, minimal full-bleed UI, honest visual
+  encoding of tech debt, surfacing real findings) were already shipped as
+  calm, honest versions via T10/T12/T14. Built four scoped, ADR-012-compliant
+  features from the rest of the playbook:
+  - Fly-mode collision: AABB test against the same plot rectangles buildings
+    render from, axis-separated so bumping a wall slides along it instead of
+    stopping dead. Verified via headful Puppeteer (pointer lock, needed for
+    fly mode, cannot be granted in this IDE's automation pane) - drove the
+    camera into a real building in a 539-file test repo and confirmed it
+    stopped at a wall. First attempt looked like the camera was frozen
+    entirely; traced with instrumented logging to a real, correct finding,
+    not a bug - a different, closer building was blocking the path the
+    whole time.
+  - 20-second idle auto-rotate in orbit mode: barely-perceptible drift,
+    stops on any input, no acceleration or repeat-showcase behaviour -
+    "soft fascination" per ADR-012, explicitly not the disorientation
+    tactic the playbook's rejected section describes.
+  - `citygen build`'s CLI output polish: a coloured summary line and a
+    "next:" hint, gated on `isatty()`/`NO_COLOR`, plain ASCII only (no
+    unicode checkmark - crashed immediately on Windows' default console
+    codepage when tried). No `rich` dependency - would violate ADR-006.
+  - `viewer/src/weather.js`: rain density tied to `stats.avg_health` (the
+    same composite score the Health overlay colours by) - a healthy repo
+    gets a clear sky. GPU-driven, matching traffic.js's pattern; capped low
+    even at the worst score; no lightning/strobing of any kind.
+  - `.github/workflows/pr-preview.yml`: builds every PR's own checkout,
+    exports a self-contained HTML preview, uploads it as an artifact,
+    comments a link. Verifying its two CLI commands against this repo
+    surfaced a real bug: `citygen/layout.py` carried a stray UTF-8 BOM that
+    `ast.parse()` treats as an invalid character, so citygen failed to
+    parse its own file. Fixed generally in `walk.read_text`
+    (`utf-8-sig` instead of `utf-8`) rather than only patching the one
+    file, since a BOM'd source file is a real thing to hit in the wild, not
+    just this repo's problem.
+
 - 2026-08-15 — Ruby support (T01 revisit, continued again). Added
   `metrics.ruby_metrics` + `resolve.RubyModuleIndex`. Ruby's `def`/`class`/
   `module` are reserved words, so - unlike the C-family languages just

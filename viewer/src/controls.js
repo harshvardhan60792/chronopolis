@@ -2,8 +2,34 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { updateUIForMode } from './ui.js';
 
-export function setupControls(camera, renderer, worldWidth) {
+export function setupControls(camera, renderer, worldWidth, plots = []) {
     let mode = 'orbit';
+
+    // Building AABBs for fly-mode collision. A flat array (not objects) so
+    // the per-frame scan has no property-lookup overhead at ~1000+ plots -
+    // it is walked every frame fly mode is active.
+    const collideBoxes = new Float32Array(plots.length * 4);
+    for (let i = 0; i < plots.length; i++) {
+        const p = plots[i];
+        collideBoxes[i * 4] = p.x;
+        collideBoxes[i * 4 + 1] = p.x + p.w;
+        collideBoxes[i * 4 + 2] = p.z;
+        collideBoxes[i * 4 + 3] = p.z + p.d;
+    }
+    const collideHeights = new Float32Array(plots.length);
+    for (let i = 0; i < plots.length; i++) collideHeights[i] = plots[i].h;
+
+    function collides(x, y, z) {
+        for (let i = 0; i < collideHeights.length; i++) {
+            if (y >= collideHeights[i]) continue;
+            const b = i * 4;
+            if (x >= collideBoxes[b] && x <= collideBoxes[b + 1] &&
+                z >= collideBoxes[b + 2] && z <= collideBoxes[b + 3]) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     const orbit = new OrbitControls(camera, renderer.domElement);
     orbit.enableDamping = true;
@@ -38,23 +64,35 @@ export function setupControls(camera, renderer, worldWidth) {
         return raycaster.ray.intersectPlane(groundPlane, pt) ? pt : null;
     }
     
+    // Idle auto-rotate: after a long stretch with no input, the camera
+    // drifts around the city at a barely-perceptible rate - restorative
+    // "soft fascination" (ADR-012), not a lure. It stops the instant any
+    // input arrives and never loops or accelerates, unlike a screensaver
+    // designed to keep you watching.
+    let lastInput = performance.now();
+    const IDLE_DELAY_MS = 20000;
+    const IDLE_RADIANS_PER_SEC = 0.012; // full turn ~9 minutes
+    function markActive() { lastInput = performance.now(); }
+
     function onMouseMove(e) {
+        markActive();
         if (mode !== 'fly' || document.pointerLockElement !== renderer.domElement) return;
         const movementX = e.movementX || 0;
         const movementY = e.movementY || 0;
         yaw -= movementX * 0.002;
         pitch -= movementY * 0.002;
-        pitch = Math.max(-1.48, Math.min(1.48, pitch)); 
-        
+        pitch = Math.max(-1.48, Math.min(1.48, pitch));
+
         camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
     }
-    
+
     function onKeyDown(e) {
+        markActive();
         const k = e.key.toLowerCase();
         if (keys.hasOwnProperty(k)) keys[k] = true;
         if (e.key === 'Shift') keys.shift = true;
         if (e.key === 'Control') keys.ctrl = true;
-        
+
         if (k === 'f') {
             toggleMode();
         }
@@ -144,7 +182,7 @@ export function setupControls(camera, renderer, worldWidth) {
         };
     }
     
-    renderer.domElement.addEventListener('pointerdown', () => activeTween = null);
+    renderer.domElement.addEventListener('pointerdown', () => { activeTween = null; markActive(); });
 
     // Dolly toward whatever is under the cursor, not the orbit target - the
     // zoom behaviour every map/city tool (Google Earth, Cities: Skylines)
@@ -152,6 +190,7 @@ export function setupControls(camera, renderer, worldWidth) {
     // mouse isn't centered.
     renderer.domElement.addEventListener('wheel', (e) => {
         activeTween = null;
+        markActive();
         if (mode !== 'orbit') return;
         e.preventDefault();
 
@@ -239,6 +278,11 @@ export function setupControls(camera, renderer, worldWidth) {
                 offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
                 camera.position.copy(orbit.target).add(offset);
             }
+            if (now - lastInput > IDLE_DELAY_MS) {
+                const offset = new THREE.Vector3().subVectors(camera.position, orbit.target);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), dt * IDLE_RADIANS_PER_SEC);
+                camera.position.copy(orbit.target).add(offset);
+            }
             orbit.update();
         } else if (mode === 'fly' && document.pointerLockElement === renderer.domElement) {
             const dir = new THREE.Vector3();
@@ -254,24 +298,41 @@ export function setupControls(camera, renderer, worldWidth) {
             let speed = baseSpeed * heightFactor * dt * 60;
             if (keys.shift) speed *= keys.w ? 3 : 1;
             if (keys.ctrl) speed *= 0.3;
-            
+
             dir.normalize();
             dir.applyQuaternion(camera.quaternion);
             dir.y = 0;
             dir.normalize();
-            
+
             if (keys[' ']) dir.y += 1;
             if (keys.shift && !keys.w) dir.y -= 1;
             
             velocity.x += dir.x * speed * 0.15;
             velocity.y += dir.y * speed * 0.15;
             velocity.z += dir.z * speed * 0.15;
-            
-            camera.position.add(velocity);
-            
+
+            // Axis-separated collision: try the full move, then each axis on
+            // its own, so bumping a wall slides you along it instead of
+            // stopping dead - simple AABB test against the same plot
+            // rectangles the buildings are drawn from, no physics engine.
+            const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
+            const nx = cx + velocity.x, ny = cy + velocity.y, nz = cz + velocity.z;
+            if (!collides(nx, ny, nz)) {
+                camera.position.set(nx, ny, nz);
+            } else if (!collides(nx, ny, cz)) {
+                camera.position.set(nx, ny, cz);
+                velocity.z = 0;
+            } else if (!collides(cx, ny, nz)) {
+                camera.position.set(cx, ny, nz);
+                velocity.x = 0;
+            } else {
+                velocity.x = 0;
+                velocity.z = 0;
+            }
+
             const damping = Math.pow(0.86, dt * 60);
             velocity.multiplyScalar(damping);
-            
+
             if (camera.position.y < 1.5) {
                 camera.position.y = 1.5;
                 velocity.y = Math.max(0, velocity.y);

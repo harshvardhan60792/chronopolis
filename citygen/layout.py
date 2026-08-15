@@ -1,4 +1,4 @@
-﻿"""Layout engine for Chronopolis: stable temporal squarified treemap."""
+"""Layout engine for Chronopolis: stable temporal squarified treemap."""
 
 import math
 from typing import Callable, Any

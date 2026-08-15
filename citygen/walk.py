@@ -149,6 +149,11 @@ def read_text(path: str) -> str | None:
             raw = fh.read()
         if b"\x00" in raw[:4096]:
             return None
-        return raw.decode("utf-8", errors="replace")
+        # utf-8-sig strips a leading BOM if present and is identical to
+        # utf-8 otherwise - some editors (mostly on Windows) write one, and
+        # ast.parse() treats it as an invalid character rather than
+        # whitespace, so a BOM'd file would otherwise always "fail to parse"
+        # for a reason that has nothing to do with the code in it.
+        return raw.decode("utf-8-sig", errors="replace")
     except OSError:
         return None

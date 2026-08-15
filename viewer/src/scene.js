@@ -10,6 +10,7 @@ import { createSky, SKY_PRESETS } from './sky.js';
 import { createTerrain } from './terrain.js';
 import { createNature } from './nature.js';
 import { createClouds } from './clouds.js';
+import { createWeather } from './weather.js';
 import { createPostFX } from './postfx.js';
 import { playIntro } from './intro.js';
 import { createTimeline } from './timeline.js';
@@ -41,7 +42,7 @@ export function initScene(cityData) {
     camera.position.set(
         world.width * 1.38, world.width * 0.46, world.depth * 1.38);
 
-    const controls = setupControls(camera, renderer, world.width);
+    const controls = setupControls(camera, renderer, world.width, cityData.layout.plots);
 
     const sky = createSky(scene, renderer, world.width, camera.far);
     const terrain = createTerrain(world.width, SKY_PRESETS[0].fog);
@@ -49,6 +50,9 @@ export function initScene(cityData) {
 
     const clouds = createClouds(world.width);
     scene.add(clouds);
+
+    const weather = createWeather(world.width, cityData.stats && cityData.stats.avg_health);
+    if (weather) scene.add(weather);
 
     if (cityData.layout.districts) {
         scene.add(createDistricts(cityData.layout.districts));
@@ -227,6 +231,7 @@ export function initScene(cityData) {
         facade.uTime.value = t;
         sea.uTime.value = t;
         clouds.userData.update(t);
+        if (weather) weather.userData.update(t);
         sky.update(t);
         if (trafficData && trafficData.points.visible) trafficData.update(t);
 
