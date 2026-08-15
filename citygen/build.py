@@ -20,7 +20,8 @@ from .gitmine import (apply_history, last_commit_ts, read_history,
                       reconstruct_timeline)
 from .coupling import calculate_cochange
 from .layout import generate_layout
-from .metrics import generic_metrics, js_metrics, python_metrics
+from .metrics import (curly_complexity, generic_metrics, go_metrics,
+                      js_metrics, python_metrics)
 from .resolve import JsModuleIndex, ModuleIndex
 from .snapshots import compute_snapshots
 from .stories import generate_stories
@@ -112,6 +113,12 @@ def build_city(root: str, opts: WalkOptions | None = None,
     js_paths = [f.rel for f in files if f.lang in JS_LANGS]
     js_index = JsModuleIndex(js_paths)
 
+    # Complexity/function heuristics only - no import resolution attempted
+    # for these (no reserved-word marker to find declarations by, and each
+    # language's module system is different enough that faking edges would
+    # do more harm than the current honest "0 import edges" does).
+    CURLY_LANGS = {"java", "csharp", "cpp", "c", "php", "kotlin", "swift", "rust"}
+
     buildings: list[dict] = []
     parse_errors: list[dict] = []
     # Keyed by path, not by index: ruins get inserted below and the array is
@@ -166,6 +173,12 @@ def build_city(root: str, opts: WalkOptions | None = None,
             b["classes"] = jr.classes
             b["complexity"] = jr.complexity
             pending_imports_js.append((f.rel, jr.imports))
+        elif f.lang == "go":
+            gr = go_metrics(text)
+            b["functions"] = gr.functions
+            b["complexity"] = gr.complexity
+        elif f.lang in CURLY_LANGS:
+            b["complexity"] = curly_complexity(text)
         buildings.append(b)
 
     # ---- git history, and the ruins it reveals ------------------------------

@@ -208,3 +208,42 @@ def js_metrics(text: str) -> JsResult:
         + _JS_DYNAMIC_IMPORT_RE.findall(text)
     )
     return JsResult(functions=functions, classes=classes, complexity=complexity, imports=imports)
+
+
+@dataclass
+class GoResult:
+    functions: int = 0
+    complexity: int = 1
+
+
+# `func Name(` and `func (recv Type) Name(` - `func` is a reserved word in Go,
+# so unlike the C-family below this is essentially unambiguous.
+_GO_FUNC_RE = re.compile(r'\bfunc\s+(?:\([^)]*\)\s+)?[A-Za-z_]\w*\s*\(')
+# Go has no `while` (folded into `for`) and no `catch` (folded into
+# if err != nil, which a regex cannot see) - `select`/`case` cover its
+# concurrency branching instead.
+_GO_DECISION_RE = re.compile(r'\b(?:if|for|switch|select|case)\b|&&|\|\|')
+
+
+def go_metrics(text: str) -> GoResult:
+    functions = len(_GO_FUNC_RE.findall(text))
+    complexity = 1 + len(_GO_DECISION_RE.findall(text))
+    return GoResult(functions=functions, complexity=complexity)
+
+
+# Decision-point counter shared by the C-family languages (Java, C#, C/C++,
+# PHP, Kotlin, Swift, Rust). Deliberately complexity-only: unlike `function`
+# in JS or `func` in Go, none of these languages has a reserved word marking
+# a function/method declaration, so a regex cannot reliably count them
+# without either missing most methods or matching every `if (...) {` too -
+# better to leave functions at 0 (visibly "unknown") than ship a number that
+# looks precise and is not. Decision keywords, by contrast, are reserved
+# words in all of these languages, so counting them carries the same
+# confidence as the Go/JS complexity counts.
+_CURLY_DECISION_RE = re.compile(
+    r'\b(?:if|for|while|switch|case|catch|match)\b|&&|\|\|'
+)
+
+
+def curly_complexity(text: str) -> int:
+    return 1 + len(_CURLY_DECISION_RE.findall(text))

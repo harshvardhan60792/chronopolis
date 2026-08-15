@@ -2,6 +2,30 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — wider language coverage (T01 revisit, continued). Tested 5
+  more real GitHub repos: spf13/cobra (Go), sharkdp/fd (Rust), google/gson
+  (Java), sinatra/sinatra (Ruby), nlohmann/json (C++). No crashes on any of
+  them, but every one rendered with complexity flat at 1 - only the JS/TS
+  fix from earlier landed, everything else was still the placeholder tier.
+  Added `metrics.go_metrics`: Go's `func` keyword is reserved, so function
+  and complexity counting there is nearly as trustworthy as the JS tier (0
+  -> 596 functions on cobra). Added `metrics.curly_complexity`: a shared
+  decision-point counter (via `if`/`for`/`while`/`switch`/`catch`/`match`,
+  all reserved words) for Java, C#, C/C++, PHP, Kotlin, Swift and Rust.
+  Deliberately complexity-only - none of these languages marks a function
+  or method declaration with a reserved word, so a regex would either miss
+  most of them or match every `if (...) {` too; shipping a function count
+  that looks precise and isn't would be worse than showing 0. No import
+  resolution was attempted for any of these seven - Go's import paths need
+  `go.mod` to resolve correctly, and the rest have no relative-specifier
+  convention the way JS does, so `import_edges` stays honestly at 0 for
+  them. Confirmed real signal: gson's complexity went from uniformly 1 to a
+  spread averaging 14.8 (max 422). All 5 repos clean in-browser -
+  `?selftest=1` green, zero bad fields, including on the 1189-building C++
+  repo with a 4856-complexity outlier. README's Limitations section now
+  lists all four tiers (Python AST / JS+Go+TS regex / complexity-only
+  regex / LOC-only) instead of a two-tier summary.
+
 - 2026-08-15 — real-repo validation (T01 revisit). Tested against four real
   GitHub repos: psf/requests, pallets/flask (Python, unaffected), and
   expressjs/express, colinhacks/zod (JS/TS, where two real gaps surfaced).
