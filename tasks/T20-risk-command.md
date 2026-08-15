@@ -51,16 +51,16 @@ Component definitions:
 
 | Component | Value | Notes |
 |---|---|---|
-| `blast` | percentile rank of `len(blast_radius(rev, i)["all"])` | from T19's `impact.py`. **0.0 when `import_resolution == "none"`** — see below |
+| `blast` | percentile rank of `len(blast_radius(rev, i)["all"])` | from T19's `impact.py`. **`None`, not 0.0, when `b["lang"] not in walk.IMPORT_RESOLVED_LANGS`** — see below |
 | `ownership` | `owner_share` if `bus_factor == 1` else `owner_share * 0.5` | a sole author is the risk; a dominant-but-not-sole author is half of it |
 | `staleness` | `min(stale_days / 540, 1.0)` | 540 days matches `calculate_health`; do not invent a second constant |
 | `complexity` | percentile rank of `complexity` | |
 | `churn` | percentile rank of `churn` | |
 
 **The honesty rule, and it is load-bearing.** When a file's language has no
-import resolution (anything but python/javascript/typescript/ruby — check the
-README Limitations table, and derive it from the same constant, do not hardcode
-a second copy), `blast` is not 0 — it is *unknown*. Set `blast` to `None`,
+import resolution — `b["lang"] not in walk.IMPORT_RESOLVED_LANGS`, the constant
+T19 added to `citygen/walk.py`; import it from there, do not hardcode a second
+copy — `blast` is not 0, it is *unknown*. Set `blast` to `None`,
 redistribute its 0.35 weight proportionally across the components that do have
 data, and set `"blast_known": False` in the output. Every surface must print
 `blast radius: unknown (no import resolution for go)` rather than a confident
@@ -70,7 +70,10 @@ people trust and a tool people stop believing after the first wrong answer.
 ## API to implement in `citygen/risk.py`
 
 ```python
-UNKNOWN_BLAST_LANGS: frozenset[str]   # every lang without import resolution
+from .walk import IMPORT_RESOLVED_LANGS
+
+HIGH_THRESHOLD = 0.70
+MODERATE_THRESHOLD = 0.40
 
 def score_all(city: dict) -> list[dict]:
     """Score every building once. Returns a list parallel to city['buildings'].
@@ -97,7 +100,9 @@ def staged_paths(repo_root: str) -> list[str]:
     Returns [] (never raises) when git is absent or nothing is staged."""
 
 def band(score: float) -> str:
-    """<0.40 low, <0.70 moderate, else high. Thresholds fixed here."""
+    """< MODERATE_THRESHOLD low, < HIGH_THRESHOLD moderate, else high.
+    Both constants are module-level exports of this file — T22 and T21 both
+    import them rather than restating 0.40/0.70 as magic numbers."""
 ```
 
 `reasons` is the part humans actually read. Generate sentences from the
@@ -158,8 +163,11 @@ unmodified).
 
 ## Acceptance criteria
 1. On this repo, `citygen risk` ranks `citygen/build.py` in the top 3. It is the
-   most-imported, highest-complexity file here; if it does not surface, the
-   formula or the blast wiring is wrong.
+   highest-complexity file here and top-3 by blast radius under this formula
+   (not the single most-imported file by raw `in_deg` — that distinction
+   matters if you're debugging why it does or doesn't rank; check blast radius,
+   not raw import count). If it does not surface, the formula or the blast
+   wiring is wrong.
 2. A file with `bus_factor == 1` and ≥10 dependents always lands in `high`.
    Assert this as a property in the tests, not by eyeballing one repo.
 3. On a Go repo (clone `spf13/cobra` into `.testrepos/`), every file reports
@@ -175,7 +183,10 @@ unmodified).
 
 ## Verify
 ```bash
-python -m citygen build . -o out/city.json && python -m citygen risk --city out/city.json
+python -m citygen build . -o out/city.json
+```
+```bash
+python -m citygen risk --city out/city.json
 ```
 ```bash
 python -m citygen risk --staged --city out/city.json

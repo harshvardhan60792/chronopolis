@@ -104,7 +104,10 @@ already instructed exactly this; this task is what discharges it.
 
 ## Verify
 ```bash
-bash scripts/fetch_testrepos.sh && python scripts/profile_build.py --repos .testrepos/manifest.txt --runs 3
+bash scripts/fetch_testrepos.sh
+```
+```bash
+python scripts/profile_build.py --repos .testrepos/manifest.txt --runs 3
 ```
 
 ## Default if ambiguous

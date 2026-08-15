@@ -1,6 +1,6 @@
 # T29 — Fill `edges.call`, the slot the schema has reserved since T01
 
-**Blocked by:** T27 · **Effort:** medium · **Phase:** C
+**Blocked by:** T27, T28 · **Effort:** medium · **Phase:** C
 **Fills:** `edges.call` in `city.json` (currently hardcoded `[]` at `build.py:406`).
 
 ## Why this exists
@@ -18,7 +18,11 @@ this from `grep -r`.
 This needs real ASTs. It is blocked on T27 for every language, **including
 Python**: `citygen`'s current `ast` path already collects `_callee_name`
 (`metrics.py:154`) but resolving a callee name to a *definition in another file*
-needs symbol tables that do not exist yet. Do not start this before T27 lands.
+needs symbol tables that do not exist yet. It is also blocked on **T28**: T28 is
+what proves the tree-sitter queries this task's node walks depend on are
+actually correct. Building a call graph on top of an unvalidated parser means a
+query bug shows up as a wrong call edge instead of a caught parity failure. Do
+not start this before both T27 and T28 land.
 
 ## Scope — deliberately narrow
 Full inter-procedural call graph resolution is a research problem (dynamic

@@ -71,7 +71,10 @@ pages do not get forwarded.
 
 ## Verify
 ```bash
-python -m citygen build . -o out/city.json && python -m citygen inspect out/city.json
+python -m citygen build . -o out/city.json
+```
+```bash
+python -m citygen inspect out/city.json
 ```
 (the doc's own claims about the tool must still be true of the tool)
 

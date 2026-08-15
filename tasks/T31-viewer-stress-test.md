@@ -53,8 +53,11 @@ the wall is anything other than the fourth row, "add LOD and frustum culling" is
 the wrong fix and T30 must not be built as written.
 
 ## Acceptance criteria
-1. Numbers at every size, on the machine `docs/05-PERFORMANCE.md` already names,
-   in real headful Chrome.
+1. Numbers at every size, in real headful Chrome, on one machine with its full
+   spec recorded: the GPU/browser `docs/05-PERFORMANCE.md` already names
+   (`ANGLE (Intel, Intel(R) UHD Graphics...)`), plus CPU, RAM, and OS, in the
+   same format T23 records for the analyser side — that doc has GPU/browser
+   only today, not the full machine.
 2. The first size that fails is identified, with **what** failed and the
    evidence.
 3. The binding constraint is named as one of the four rows above.

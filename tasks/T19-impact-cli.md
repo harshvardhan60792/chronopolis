@@ -12,9 +12,20 @@ highest-value-per-hour output in the whole project.
 
 ## Files
 - new: `citygen/impact.py`
+- edit: `citygen/walk.py` (add the `IMPORT_RESOLVED_LANGS` constant — see below)
 - edit: `citygen/cli.py` (add the `impact` subcommand)
 - new: `citygen/tests/test_impact.py`
 - edit: `README.md` (CLI Reference section)
+
+## Shared constant — add this before anything else in this task
+Add to `citygen/walk.py`, near `EXT_LANG`:
+```python
+IMPORT_RESOLVED_LANGS = frozenset({"python", "javascript", "typescript", "ruby"})
+```
+This is the **one** place the "which languages get real import edges" set is
+defined. T20 (`risk.py`) and T21 (`report.py`) both import it from here rather
+than restating it — a second hardcoded copy is exactly the drift bug this
+constant exists to prevent.
 
 ## Data contract (already true — do not change it)
 `city["edges"]["import"]` is a list of `[importer_idx, imported_idx, weight]`.
@@ -150,9 +161,9 @@ Rules for this output:
   "truncated": false
 }
 ```
-`import_resolution` is `"full"` for python/javascript/typescript/ruby,
-`"none"` for every other language. The PR bot (T21) reads this field to decide
-whether to report a blast radius at all.
+`import_resolution` is `"full"` when `b["lang"] in walk.IMPORT_RESOLVED_LANGS`,
+`"none"` otherwise. The PR bot (T21) reads this field to decide whether to
+report a blast radius at all.
 
 ## Error paths — all of them must be handled
 | Condition | Behaviour |
@@ -188,10 +199,12 @@ python citygen/tests/test_impact.py
 ```
 
 ## Tests to write in `citygen/tests/test_impact.py`
-Follow the existing style in `citygen/tests/test_coupling.py` — bare `test_*`
-functions with `assert`, run directly as a script, **not** `unittest.TestCase`
-(see T18: `unittest discover` is blind to this project's tests, and CI runs each
-file directly).
+Follow the existing style in `citygen/tests/test_phase1.py` (or
+`test_invariants.py`) — bare `test_*` functions with `assert`, run directly as a
+script, **not** `unittest.TestCase`. (`test_coupling.py` and `test_git.py` are
+the *opposite* style, `unittest.TestCase` subclasses — do not copy those two.
+See T18: `unittest discover` is blind to bare-function test files, and CI runs
+each file directly regardless of which style it uses.)
 
 - `test_reverse_index_direction` — a two-node fixture, assert `rev[1] == [0]` for
   edge `[0, 1, 1]`.

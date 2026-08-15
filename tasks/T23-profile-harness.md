@@ -78,7 +78,15 @@ inside it.
 
 ```
 python scripts/profile_build.py --repos .testrepos/manifest.txt --runs 3 --out docs/perf/stages.md
+python scripts/profile_build.py --repos .testrepos/manifest.txt --incremental
 ```
+
+`--incremental` is accepted now (before T24/T25 exist) as a forward-compatible
+flag: if the `citygen build` invocation it shells out to doesn't understand
+`--incremental` yet, the harness catches that specific failure, reports
+"incremental not yet implemented" per repo instead of crashing, and exits 0.
+T25 turns this into a real measurement later without needing to touch this
+script's CLI surface again.
 
 Behaviour:
 - Reads a manifest of local repo paths, one per line, with an optional label.

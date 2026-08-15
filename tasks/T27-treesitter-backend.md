@@ -15,11 +15,15 @@ trees for all of them.
 anyone tries it. Tree-sitter is a dependency. The resolution is not to break
 ADR-006 but to bound it.
 
-### ADR-014 — write this first, before any code
-Add to `docs/04-DECISIONS.md`:
+### Write the next-numbered ADR first, before any code
+Check `docs/04-DECISIONS.md` for the highest ADR number committed so far —
+T25 may have already taken ADR-014 for the incremental-build split, since
+Phase B (T23-T26) runs before Phase C in the plan's ordering. Use the next
+free number after whatever is already there; do **not** assume 014. Add to
+`docs/04-DECISIONS.md`:
 
 ```
-## ADR-014 — Tree-sitter is an optional accuracy upgrade, never a requirement
+## ADR-0NN — Tree-sitter is an optional accuracy upgrade, never a requirement
 Status: accepted, amends ADR-006 (does not supersede it)
 Context: regex heuristics cap analysis quality for every non-Python language,
 and 8 languages get no function count at all. Real parsers fix this. ADR-006
@@ -42,7 +46,12 @@ migration is reverted.** The fallback is the product for most users.
 - new: `citygen/parsers/__init__.py` (backend selection)
 - new: `citygen/parsers/treesitter.py`
 - new: `citygen/parsers/queries/*.scm` (one query file per language)
-- edit: `citygen/metrics.py` (dispatch through the backend selector)
+- edit: `citygen/metrics.py` (dispatch through the backend selector; bump
+  `PARSER_VERSION`, added in T24)
+- edit: `citygen/cache.py` (T24's `_backend_tag()` must return
+  `parsers.backend_name()` once this module exists — see the comment T24 left
+  on that function. Skipping this makes the cache silently serve wrong-backend
+  results; see T24's cache-key section for why.)
 - edit: `citygen/build.py` (no logic change — it calls the selector)
 - edit: `pyproject.toml` (the `[parsers]` extra)
 - edit: `.github/workflows/ci.yml` (a second job with the extra installed)
@@ -124,14 +133,25 @@ query file, its fixtures, and its differential results.
    convert that into a crash.
 
 ## Verify
+Run in a POSIX shell (Git Bash on Windows) for the env-var-prefix line — plain
+PowerShell does not support `VAR=x cmd`.
 ```bash
-pip install -e . && python citygen/tests/test_parsers.py
+pip install -e .
 ```
 ```bash
-pip install -e ".[parsers]" && python -m citygen build .testrepos/gson -o out/gson.json -v
+python citygen/tests/test_parsers.py
 ```
 ```bash
-CITYGEN_PARSER=builtin python -m citygen build . -o out/builtin.json && python -m citygen build . -o out/ts.json
+pip install -e ".[parsers]"
+```
+```bash
+python -m citygen build .testrepos/gson -o out/gson.json -v
+```
+```bash
+CITYGEN_PARSER=builtin python -m citygen build . -o out/builtin.json
+```
+```bash
+python -m citygen build . -o out/ts.json
 ```
 
 ## Default if ambiguous

@@ -48,9 +48,9 @@ task below; it fixes the ordering, the ADR changes, and the kill criteria.
 | `T24-cache-layer.md` | Content-addressed parse cache | T23 |
 | `T25-incremental-rebuild.md` | Invalidation graph, byte-identical output | T24 |
 | `T26-scale-proof.md` | Real numbers on 40k–250k-file repos | T25 |
-| `T27-treesitter-backend.md` | Optional real parsers (ADR-014) | T25 |
+| `T27-treesitter-backend.md` | Optional real parsers (ADR-0NN — take the next free number, likely not 014, since T25 may already have taken it) | T25 |
 | `T28-parser-parity.md` | Differential proof the new parser is better | T27 |
-| `T29-call-graph.md` | Fill `edges.call` at last | T27 |
+| `T29-call-graph.md` | Fill `edges.call` at last | T27, T28 |
 | `T32-szz-ground-truth.md` | Mine bug-introducing commits | T20 |
 | `T33-risk-validation.md` | Validate the score; publish either way | T32 |
 | `T34-writeup.md` | The engineering write-up | T25, T26, T33 |

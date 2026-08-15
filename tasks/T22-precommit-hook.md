@@ -130,10 +130,16 @@ When nothing trips: **print nothing at all** and exit 0. A hook that prints
 
 ## Verify
 ```bash
-python -m citygen build . -o out/city.json && python -m citygen hook install
+python -m citygen build . -o out/city.json
 ```
 ```bash
-git add citygen/build.py && python -m citygen hook run --city out/city.json
+python -m citygen hook install
+```
+```bash
+git add citygen/build.py
+```
+```bash
+python -m citygen hook run --city out/city.json
 ```
 ```bash
 python citygen/tests/test_hook.py
@@ -153,8 +159,8 @@ Use `tempfile.TemporaryDirectory` plus `git init` for a throwaway repo; bare
 - `test_missing_city_hint_is_rate_limited`
 
 ## Default if ambiguous
-- Default threshold is 0.70, matching T20's `high` band. One constant, imported
-  from `risk.py` — do not restate the number here.
+- Default threshold is `risk.HIGH_THRESHOLD` (0.70), imported from `risk.py` —
+  do not restate the number 0.70 in `hook.py`.
 - The hook considers only `--diff-filter=ACMR` staged paths. Deletions are not
   risky in the sense this tool measures, and flagging them would be noise.
 - Never write to `.gitignore`, never create `out/` — the hook only reads.

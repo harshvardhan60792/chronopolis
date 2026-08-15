@@ -16,6 +16,7 @@ verify.
 
 ## Files
 - new: `citygen/cache.py`
+- edit: `citygen/metrics.py` (add `PARSER_VERSION = "1"` — see "Cache key" below)
 - edit: `citygen/build.py` (read-through the cache in the per-file loop)
 - edit: `citygen/cli.py` (`--cache-dir`, `--no-cache`, and a `cache` subcommand)
 - new: `citygen/tests/test_cache.py`
@@ -42,9 +43,21 @@ is worse than no cache.
 
 ## Cache key
 ```python
+from .metrics import PARSER_VERSION   # add this constant to metrics.py now: PARSER_VERSION = "1"
+
+def _backend_tag() -> str:
+    """'builtin' today. T27 (tree-sitter) MUST change this to include
+    parsers.backend_name() once a second backend exists - two backends can
+    produce different metrics for identical file content, and if the key
+    doesn't change with the active backend, the cache silently serves one
+    backend's numbers under the other. See T27's Files list, which edits this
+    function for exactly that reason. Do not let this comment go stale."""
+    return "builtin"
+
 key = sha256(
     CACHE_FORMAT_VERSION.encode()   # bump when the record shape changes
     + b"\0" + PARSER_VERSION.encode()  # bump when ANY metrics function changes
+    + b"\0" + _backend_tag().encode()  # which parser produced this record
     + b"\0" + lang.encode()
     + b"\0" + file_bytes
 ).hexdigest()
@@ -56,10 +69,11 @@ manifest as a *fast pre-check only* (skip hashing when both match a known entry)
 never as the key itself; mtime is not a correctness signal and a build that
 trusts it will serve wrong results after a checkout.
 
-`PARSER_VERSION` is a constant in `citygen/metrics.py`. **Every change to any
-metrics function must bump it.** Add this to the acceptance tests, because it is
-the rule that will be forgotten: a test that hashes the source of the metrics
-module and fails when it changes without a version bump.
+`PARSER_VERSION` is a constant in `citygen/metrics.py` (add it in this task —
+it doesn't exist yet). **Every change to any metrics function must bump it.**
+Add this to the acceptance tests, because it is the rule that will be
+forgotten: a test that hashes the source of the metrics module and fails when
+it changes without a version bump.
 
 ## API to implement in `citygen/cache.py`
 
@@ -155,10 +169,16 @@ python -m citygen cache prune [--cache-dir DIR]     # drop objects not reference
 
 ## Verify
 ```bash
-python -m citygen cache clear && python -m citygen build . -o out/a.json
+python -m citygen cache clear
 ```
 ```bash
-python -m citygen build . -o out/b.json && python -m citygen cache stats
+python -m citygen build . -o out/a.json
+```
+```bash
+python -m citygen build . -o out/b.json
+```
+```bash
+python -m citygen cache stats
 ```
 ```bash
 python citygen/tests/test_cache.py

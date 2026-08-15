@@ -43,6 +43,13 @@ EXT_LANG = {
     ".sql": "sql",
 }
 
+# Languages whose import/require syntax citygen actually resolves to edges.
+# Every other language still gets metrics (functions/complexity where a tier
+# supports it) but NEVER a blast radius - callers must treat that as unknown
+# data, not a confident zero. Single source of truth: impact.py, risk.py and
+# report.py all import this rather than restating the set.
+IMPORT_RESOLVED_LANGS = frozenset({"python", "javascript", "typescript", "ruby"})
+
 BINARY_EXTS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg", ".pdf",
     ".zip", ".gz", ".tar", ".whl", ".exe", ".dll", ".so", ".dylib",

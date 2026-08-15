@@ -37,7 +37,7 @@ Thesis: the analysis is the product; the 3D city is its deep-dive view.
 
 | ID | Task | Status | Blocked by | Notes |
 |----|------|--------|-----------|-------|
-| T19 | `citygen impact` — blast radius CLI | **TODO** | — | Pure exposure of `edges.import`, which has existed since T01. Highest value per hour in the plan. |
+| T19 | `citygen impact` — blast radius CLI | **DONE** | — | Added `impact` CLI command and reverse import index. |
 | T20 | `citygen risk` — shared risk engine | **TODO** | T19 | One library, three surfaces (T21/T22 both consume it). Risk ≠ health: health is "how bad is this file", risk is "how bad is *changing* it". |
 | T21 | PR risk comment | **TODO** | T19, T20 | Upgrades `pr-preview.yml` from a download link to the finding itself. Highest retention surface: nobody has to install anything. |
 | T22 | `citygen hook install` | **TODO** | T20 | Read-only over an existing `city.json`; <200 ms budget; warns, never blocks by default. A slow hook gets `--no-verify`'d permanently. |
@@ -45,9 +45,9 @@ Thesis: the analysis is the product; the 3D city is its deep-dive view.
 | T24 | Content-addressed cache | **TODO** | T23 | Cache parse results by content hash; never cache resolved edges (resolution depends on the whole file set). |
 | T25 | Incremental rebuild | **TODO** | T24 | The signal task. Invariant: incremental output must be **byte-identical** to a cold build. Verified by a seeded differential fuzz test, not spot checks. |
 | T26 | Scale proof | **TODO** | T25 | Real numbers, pinned shas, named machine. Publishes at least one honest failure. Produces the gate for T30/T31. |
-| T27 | Tree-sitter optional backend | **TODO** | T25 | Needs **ADR-014**: core stays stdlib-only, tree-sitter is an extra, CI tests both paths. If the optional path degrades the default path, it is reverted. |
+| T27 | Tree-sitter optional backend | **TODO** | T25 | Needs the next free ADR number (T25 may already have taken 014 for the incremental split — check before writing it): core stays stdlib-only, tree-sitter is an extra, CI tests both paths. If the optional path degrades the default path, it is reverted. |
 | T28 | Parser parity | **TODO** | T27 | Hand-counted fixtures per language. Python calibrates against `ast` (exact). Must publish at least one "no measurable gain" or "worse here" finding. |
-| T29 | Fill `edges.call` | **TODO** | T27 | The schema has reserved it since T01 and `build.py:406` has emitted `[]` ever since. Must report `call_resolution_rate` — a partial call graph presented as complete is the failure mode. |
+| T29 | Fill `edges.call` | **TODO** | T27, T28 | The schema has reserved it since T01 and `build.py:406` has emitted `[]` ever since. Blocked on T28 too — a call graph built on unvalidated parser queries turns a query bug into a wrong edge instead of a caught parity failure. Must report `call_resolution_rate` — a partial call graph presented as complete is the failure mode. |
 | T32 | SZZ-lite ground truth | **TODO** | T20 | Mine bug-introducing commits. **The 30-pair manual audit is mandatory before T33 publishes anything.** Label quality is the hard part, not the scoring. |
 | T33 | Risk score validation | **TODO** | T32 | No ML (`00-VISION.md` non-goal stands, Phase 2 §3.6). Fixed rule, measured. Temporal split to prevent leakage. Ships **even if churn alone wins**. |
 | T34 | Engineering write-up | **TODO** | T25, T26, T33 | One subject, 1500–2500 words, includes a "what went wrong" section. Every number traces to a source doc. |
