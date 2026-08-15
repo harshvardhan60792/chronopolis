@@ -1,8 +1,14 @@
 """Per-file metrics.
 
-Two tiers:
+Three tiers:
   * `generic_metrics` - works on any text file (LOC, SLOC, TODOs).
   * `python_metrics`  - AST-based: functions, classes, complexity, imports.
+  * `js_metrics`      - regex-based: functions, classes, complexity, imports,
+                        for JavaScript/TypeScript. Real parsing needs a real
+                        parser; this is deliberately a heuristic (comments
+                        and strings are not stripped, so a `// if (x)` in a
+                        comment counts too) - good enough for the building
+                        height/arcs signal, not a linter.
 
 Complexity is a decision-point count, not McCabe from a control-flow graph.
 It is within a few percent of McCabe on real code, needs no dependency, and is
@@ -12,6 +18,7 @@ what the building height is derived from. See docs/04-DECISIONS.md ADR-004.
 from __future__ import annotations
 
 import ast
+import re
 from dataclasses import dataclass, field
 
 TODO_MARKERS = ("TODO", "FIXME", "HACK", "XXX")
@@ -151,3 +158,53 @@ def _callee_name(node: ast.AST) -> str:
         base = _callee_name(node.value)
         return f"{base}.{node.attr}" if base else node.attr
     return ""
+
+
+@dataclass
+class JsResult:
+    functions: int = 0
+    classes: int = 0
+    complexity: int = 1
+    # Raw import specifiers as written (e.g. "./foo", "../lib/bar", "react").
+    # Resolving these to repo paths is resolve.py's job, same split as Python.
+    imports: list[str] = field(default_factory=list)
+
+
+# `function foo(` / `function*(` / anonymous `function(`.
+_JS_FUNCTION_KEYWORD_RE = re.compile(r'\bfunction\s*\*?\s*[A-Za-z_$][\w$]*\s*\(|\bfunction\s*\*?\s*\(')
+# `const foo = (...) =>` / `const foo = async x =>` - the two arrow shapes
+# actually worth counting as a named unit. Bare inline arrows passed as
+# callback arguments (`arr.map(x => x.id)`) are intentionally not counted -
+# they are not "a function in this file" the way a top-level building wants.
+_JS_ARROW_ASSIGN_RE = re.compile(
+    r'\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s+)?\(?[^=;{}\n]*\)?\s*=>'
+)
+_JS_CLASS_RE = re.compile(r'\bclass\s+[A-Za-z_$][\w$]*')
+# Decision points: unambiguous keywords/operators only. Ternaries (`?:`) and
+# `??` are skipped - too easily confused with TS optional chaining/typing
+# for a regex to disambiguate safely.
+_JS_DECISION_RE = re.compile(
+    r'\b(?:if|for|while|catch|case)\b|&&|\|\|'
+)
+
+# import 'x'; import x from 'x'; import {a,b} from 'x'; import x, {a} from 'x'
+_JS_IMPORT_RE = re.compile(r'''\bimport\s+(?:[\w${},\s*]+\s+from\s+)?['"]([^'"]+)['"]''')
+# export {a} from 'x'; export * from 'x'
+_JS_EXPORT_FROM_RE = re.compile(r'''\bexport\s+(?:[\w${},\s*]+|\*)\s+from\s+['"]([^'"]+)['"]''')
+# require('x')
+_JS_REQUIRE_RE = re.compile(r'''\brequire\(\s*['"]([^'"]+)['"]\s*\)''')
+# import('x')  (dynamic import)
+_JS_DYNAMIC_IMPORT_RE = re.compile(r'''\bimport\(\s*['"]([^'"]+)['"]\s*\)''')
+
+
+def js_metrics(text: str) -> JsResult:
+    functions = len(_JS_FUNCTION_KEYWORD_RE.findall(text)) + len(_JS_ARROW_ASSIGN_RE.findall(text))
+    classes = len(_JS_CLASS_RE.findall(text))
+    complexity = 1 + len(_JS_DECISION_RE.findall(text))
+    imports = (
+        _JS_IMPORT_RE.findall(text)
+        + _JS_EXPORT_FROM_RE.findall(text)
+        + _JS_REQUIRE_RE.findall(text)
+        + _JS_DYNAMIC_IMPORT_RE.findall(text)
+    )
+    return JsResult(functions=functions, classes=classes, complexity=complexity, imports=imports)

@@ -95,3 +95,48 @@ class ModuleIndex:
             if hit:
                 return hit
         return None
+
+
+_JS_RESOLVE_SUFFIXES = (
+    "", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+    "/index.js", "/index.jsx", "/index.ts", "/index.tsx",
+)
+_JS_KNOWN_EXTS = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")
+
+
+class JsModuleIndex:
+    """Resolves JS/TS import specifiers to repo-relative file paths.
+
+    Only relative specifiers (`./x`, `../x`) can ever be intra-repo - bare
+    specifiers (`react`, `lodash/get`) are npm packages by construction and
+    are never even attempted, same split as ModuleIndex treats third-party
+    Python imports.
+    """
+
+    def __init__(self, js_paths: list[str]):
+        self.paths = set(js_paths)
+
+    def resolve(self, spec: str, from_file: str) -> str | None:
+        if not spec.startswith("."):
+            return None
+        base = os.path.dirname(from_file)
+        joined = os.path.normpath(os.path.join(base, spec)).replace("\\", "/")
+
+        # Node's ESM resolution requires TS source to write a *.js* specifier
+        # even when importing a *.ts* file ("./foo.js" resolving to foo.ts) -
+        # extremely common in modern TS projects. Try the literal specifier
+        # first (it may really be a co-located .js file), then retry with any
+        # known JS/TS extension stripped so the suffix loop can find the real
+        # file under a different extension.
+        candidates = [joined]
+        for ext in _JS_KNOWN_EXTS:
+            if joined.endswith(ext):
+                candidates.append(joined[: -len(ext)])
+                break
+
+        for cand in candidates:
+            for suffix in _JS_RESOLVE_SUFFIXES:
+                hit = cand + suffix
+                if hit in self.paths:
+                    return hit
+        return None

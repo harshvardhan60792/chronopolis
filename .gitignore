@@ -22,3 +22,5 @@ viewer/public/*.json
 
 .DS_Store
 Thumbs.db
+
+.testrepos/

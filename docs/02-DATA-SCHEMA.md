@@ -57,7 +57,7 @@ Keys marked ✅ are emitted today by T01. Keys marked ⏳ are emitted as
       "ext_imports": 6,                     // imports that left the repo
       "in_deg": 1,                          // in-repo importers
       "out_deg": 3,
-      "parsed": true                        // null for non-Python files
+      "parsed": true                        // true for Python (AST) and JS/TS (regex); null otherwise
 
       // ⏳ T02 adds:
       // "commits": 41, "churn": 1820, "adds": 1200, "dels": 620,

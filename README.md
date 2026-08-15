@@ -79,7 +79,7 @@ reproduction steps in `docs/05-PERFORMANCE.md`.
 
 ## Limitations
 
-- **Deep Parsing:** Abstract Syntax Tree (AST) deep parsing is currently limited to Python files. Other languages fall back to regex heuristics for imports and complexity.
+- **Deep Parsing:** Abstract Syntax Tree (AST) deep parsing is Python-only. JavaScript/TypeScript get a regex heuristic for functions, complexity and imports (including resolving `./foo.js` specifiers to `foo.ts`, the ESM-in-TS convention) — real, but not a real parser, so comments/strings aren't stripped and a `// if (x)` in a comment counts. Every other language gets LOC/SLOC/TODO counts only: complexity stays flat at 1, no function count, no import arcs.
 - **History Approximation:** We capture git snapshots, not every single commit line-by-line, to keep the analysis under 10 seconds.
 - **Ownership:** "Bus factor" and "Ownership" are calculated based on commit counts to a file, not precise blame-based line ownership.
 

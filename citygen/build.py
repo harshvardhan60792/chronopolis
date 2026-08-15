@@ -20,8 +20,8 @@ from .gitmine import (apply_history, last_commit_ts, read_history,
                       reconstruct_timeline)
 from .coupling import calculate_cochange
 from .layout import generate_layout
-from .metrics import generic_metrics, python_metrics
-from .resolve import ModuleIndex
+from .metrics import generic_metrics, js_metrics, python_metrics
+from .resolve import JsModuleIndex, ModuleIndex
 from .snapshots import compute_snapshots
 from .stories import generate_stories
 from .walk import (EXT_LANG, FileRec, WalkOptions, is_source_path, read_text,
@@ -108,11 +108,16 @@ def build_city(root: str, opts: WalkOptions | None = None,
     py_paths = [f.rel for f in files if f.lang == "python"]
     index = ModuleIndex(py_paths)
 
+    JS_LANGS = {"javascript", "typescript"}
+    js_paths = [f.rel for f in files if f.lang in JS_LANGS]
+    js_index = JsModuleIndex(js_paths)
+
     buildings: list[dict] = []
     parse_errors: list[dict] = []
     # Keyed by path, not by index: ruins get inserted below and the array is
     # re-sorted, so any index captured during this pass would be wrong.
     pending_imports: list[tuple[str, list]] = []
+    pending_imports_js: list[tuple[str, list[str]]] = []
 
     for f in files:
         text = read_text(f.abs)
@@ -152,6 +157,15 @@ def build_city(root: str, opts: WalkOptions | None = None,
                 pending_imports.append((f.rel, pr.imports))
             else:
                 parse_errors.append({"path": f.rel, "error": pr.error})
+        elif f.lang in JS_LANGS:
+            # Regex heuristic, not a real parser - see metrics.js_metrics.
+            # It cannot fail the way ast.parse can, so there is no error path.
+            jr = js_metrics(text)
+            b["parsed"] = True
+            b["functions"] = jr.functions
+            b["classes"] = jr.classes
+            b["complexity"] = jr.complexity
+            pending_imports_js.append((f.rel, jr.imports))
         buildings.append(b)
 
     # ---- git history, and the ruins it reveals ------------------------------
@@ -220,6 +234,20 @@ def build_city(root: str, opts: WalkOptions | None = None,
                 if tj is None or tj == bi:
                     continue
                 edge_w[(bi, tj)] = edge_w.get((bi, tj), 0) + 1
+        buildings[bi]["ext_imports"] = seen_ext
+
+    for rel, specs in pending_imports_js:
+        bi = by_path[rel]
+        seen_ext = 0
+        for spec in specs:
+            target = js_index.resolve(spec, rel)
+            if target is None:
+                seen_ext += 1
+                continue
+            tj = by_path.get(target)
+            if tj is None or tj == bi:
+                continue
+            edge_w[(bi, tj)] = edge_w.get((bi, tj), 0) + 1
         buildings[bi]["ext_imports"] = seen_ext
 
     import_edges = [[a, b, w] for (a, b), w in sorted(edge_w.items())]

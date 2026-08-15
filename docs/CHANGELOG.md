@@ -2,6 +2,32 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-15 — real-repo validation (T01 revisit). Tested against four real
+  GitHub repos: psf/requests, pallets/flask (Python, unaffected), and
+  expressjs/express, colinhacks/zod (JS/TS, where two real gaps surfaced).
+  First: the README claimed a "regex heuristic" fallback for non-Python
+  languages, but no such code existed - every JS/TS file rendered flat
+  (complexity=1, 0 functions, 0 import arcs) no matter its actual content.
+  Added `metrics.js_metrics` (regex-based function/class/complexity/import
+  extraction for JS/TS) and `resolve.JsModuleIndex` (relative-specifier
+  resolution with the same directory-walk + suffix-append approach as the
+  Python resolver), wired into build.py. Confirmed on express: 0 -> 3114
+  functions, 0 -> 57 import edges, spot-checked against real files
+  (`lib/application.js`: 26 functions/631 lines, matches its actual
+  small-method style). Second, found while testing the TS repo: modern
+  TypeScript/ESM code writes `from "./foo.js"` even when the real file is
+  `foo.ts` (Node's ESM resolution requires the `.js` specifier regardless of
+  source extension) - the resolver's naive suffix-append never tried
+  stripping that extension first, so zod resolved only 3 of what should be
+  ~540 import edges. Fixed by retrying with any known JS/TS extension
+  stripped before re-appending resolution suffixes (3 -> 540 edges).
+  README's Limitations section corrected to describe what's actually
+  implemented (Python AST, JS/TS regex, everything else LOC-only) instead of
+  the previous blanket "regex heuristics for imports and complexity" claim
+  that wasn't true for any language but JS/TS even now. All four repos
+  verified clean in-browser: `?selftest=1` green, zero console errors, zero
+  NaN/negative metric fields.
+
 - 2026-08-15 — T18 finished: real README screenshots. Captured
   `docs/img/hero.png`, `overlays.png` and `timemachine.png` by driving the
   actual built app with a headful-Puppeteer script against real city.json
