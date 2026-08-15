@@ -53,15 +53,18 @@ def _cmd_build(a: argparse.Namespace) -> int:
 
     out = a.out
     os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
-    text = json.dumps(city, separators=(",", ":") if a.compact else None,
-                      indent=None if a.compact else 2)
-    if a.gzip:
-        out = out if out.endswith(".gz") else out + ".gz"
-        with gzip.open(out, "wt", encoding="utf-8") as fh:
-            fh.write(text)
-    else:
-        with open(out, "w", encoding="utf-8") as fh:
-            fh.write(text)
+    
+    from ._profile import stage
+    with stage("serialise"):
+        text = json.dumps(city, separators=(",", ":") if a.compact else None,
+                          indent=None if a.compact else 2)
+        if a.gzip:
+            out = out if out.endswith(".gz") else out + ".gz"
+            with gzip.open(out, "wt", encoding="utf-8") as fh:
+                fh.write(text)
+        else:
+            with open(out, "w", encoding="utf-8") as fh:
+                fh.write(text)
 
     s = city["stats"]
     size = os.path.getsize(out)
@@ -86,6 +89,12 @@ def _cmd_build(a: argparse.Namespace) -> int:
     print(f"{green('OK')} built {bold(building_count)} "
           f"in {dt:.2f}s -> {dim(out)} ({size/1024:.1f} KB)")
     print(f"  {dim('next:')} python -m citygen serve {out}")
+    
+    from ._profile import results
+    st = results()
+    if st:
+        print(f"PROFILING_RESULTS: {json.dumps(st)}")
+    
     return 0
 
 
