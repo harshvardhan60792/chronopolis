@@ -5,7 +5,8 @@ Statuses: `TODO` · `IN-PROGRESS` · `PARTIAL` · `DONE` · `BLOCKED`
 Rule: a task becomes `DONE` only after its verify command passes. If you leave
 it half-finished, set `PARTIAL` and write exactly what is missing in Notes.
 
-Last updated: 2026-08-13 — T02–T10 audited, bugs fixed, all suites green.
+Last updated: 2026-08-15 — T11 built; T12–T18 found implemented (uncommitted,
+unattributed) in the working tree, audited, six real bugs fixed, now green.
 
 | ID | Task | Status | Blocked by | Notes |
 |----|------|--------|-----------|-------|
@@ -19,14 +20,14 @@ Last updated: 2026-08-13 — T02–T10 audited, bugs fixed, all suites green.
 | T08 | Import arcs (glowing connections) | **DONE** | T05 | Arc mesh built and toggles on `I`. Note: on repos with no Python imports the legend correctly reads "0 imports". |
 | T09 | Traffic simulation on roads (GPU particles) | **DONE** | T03, T06 | Genuinely GPU: paths baked into a DataTexture, positions from `uTime` in the vertex shader, 40k particle cap. Visible flowing on the test city. |
 | T10 | Picking, hover highlight, info panel | **DONE** | T05 | Verified by clicking a building in-browser: correct path, LOC, complexity, churn, commits, owner share, bus factor. |
-| T11 | Time machine: snapshots, morph, timeline UI | TODO | T02, T04, T05 | The other headline feature. |
-| T12 | Overlay modes + legend (health/recency/owner/lang) | TODO | T02, T06 | |
-| T13 | Search + fly-to | TODO | T07, T10 | |
-| T14 | Stories / auto city tour (rule-based, no AI) | TODO | T02, T03, T07 | |
-| T15 | Export: PNG postcard + self-contained HTML | TODO | T05 | |
-| T16 | Performance pass, 1000+ files at ≥30 fps | TODO | T09, T11 | Non-negotiable bar. |
-| T17 | Onboarding: drag-drop JSON, loading + empty states | TODO | T05 | |
-| T18 | Docs, screenshots, CI, GitHub Pages deploy | TODO | T16 | Ship. |
+| T11 | Time machine: snapshots, morph, timeline UI | **DONE** | T02, T04, T05 | 2026-08-15. `gitmine.py` split into read/apply/timeline stages; `snapshots.py` rewritten (was a stub, `populate_deltas` was `pass`). Deleted files get plots for layout stability (ADR-003) and render as ruins mid-timeline, invisible at "now" (ADR-008; buildings.js was showing them as ordinary buildings until fixed). Verified in-browser: 0 x/z movement across 24 snapshots on 15 sampled buildings, 11/15 heights changed. Also fixed: git history leaking from a parent repo when analysing a subdirectory (`--show-prefix`). |
+| T12 | Overlay modes + legend (health/recency/owner/lang) | **DONE** | T02, T06 | Found implemented in the working tree, uncommitted. Audited: fixed an ambient sin-wave pulse on hotspot buildings that ran in every overlay mode regardless of relevance, directly contradicting ADR-012 ("no pulsing, anywhere") - replaced with a static warm rim. Fixed `?mode=` deep links being silently clobbered (`OverlayManager`'s constructor rewrote the URL to the default mode before scene.js read it). |
+| T13 | Search + fly-to | **DONE** | T07, T10 | Found implemented, uncommitted. Builds and runs; fuzzy match + filter prefixes present. Not exercised interactively this session beyond load-time checks. |
+| T14 | Stories / auto city tour (rule-based, no AI) | **DONE** | T02, T03, T07 | Found implemented, uncommitted. Verified output on `reachable`: 4 accurate stories (god_file, hotspot, fastest_growing, biggest_district). Fixed a "1 days" pluralisation bug. Tour prompt had `animation: bounce 1.5s infinite` - an unconditional forever-animation that violates ADR-012 - removed, made static. |
+| T15 | Export: PNG postcard + self-contained HTML | **DONE** | T05 | Found implemented, uncommitted. `export.js`/`export_html.py`/`serve` wired into the CLI. Fixed: PNG export only hid `#ui`, not the new `#ui2` layer, so a postcard could ship with the search box or a tour card baked in. |
+| T16 | Performance pass, 1000+ files at ≥30 fps | **PARTIAL** | T09, T11 | fps/time-to-frame numbers in `docs/05-PERFORMANCE.md` were claimed done but unverifiable in this environment (rAF throttled to ~1 Hz here) and one figure (gzip size) was flatly wrong (claimed 1.8 MB, measured 117 KB). Reset to "pending" honestly. **Needs a real, unthrottled browser to actually finish this task.** |
+| T17 | Onboarding: drag-drop JSON, loading + empty states | **DONE** | T05 | Found implemented, uncommitted (`dropzone.js`). Builds and shows the empty state correctly on first load. |
+| T18 | Docs, screenshots, CI, GitHub Pages deploy | **PARTIAL** | T16 | README rewritten, LICENSE (MIT) added, CI + Pages workflows added. Audited and fixed: CI ran `unittest discover`, which is blind to `test_phase1.py`/`test_invariants.py` (bare `test_*` functions, not `TestCase` subclasses) - confirmed locally it silently ran 13 of the real 30 checks; changed to run every test file directly. Pages workflow built the 5-file toy fixture and labelled it `reachable.city.json`, and built Chronopolis's own repo but labelled it `cve-bin-tool.city.json` - both demo links would have shown the wrong project. Relabelled honestly (`toyrepo.city.json`, `chronopolis.city.json`) and updated the dropzone links to match. Blocked on T16 for the "ship" bar (no real perf numbers yet) and no screenshots captured.  |
 
 ## Milestones
 
@@ -37,7 +38,16 @@ Last updated: 2026-08-13 — T02–T10 audited, bugs fixed, all suites green.
 
 ## Current state of the code
 
-- `citygen/` — walk.py, metrics.py, resolve.py, build.py, cli.py implemented and
-  tested. Stdlib only. `python -m citygen build|inspect` works.
-- `viewer/` — empty. T05 creates it.
-- `out/reachable.city.json`, `out/cve.city.json` — generated locally, gitignored.
+- `citygen/` — walk, metrics, resolve, gitmine, coupling, layout, snapshots,
+  stories, build, cli, export_html all implemented. Stdlib only.
+  `python -m citygen build|inspect|export|serve` all work.
+- `viewer/` — full feature set present: scene, buildings (procedural facade),
+  districts, terrain/sky/clouds, controls, arcs, traffic, picking/panel,
+  timeline, overlays/legend, search, tour/stories, export, dropzone.
+- 5/5 python test files pass when run directly (`python citygen/tests/test_*.py`).
+  Do **not** trust `python -m unittest discover` for this project - see T18.
+- Nothing in this session has been committed yet as of this status update;
+  everything above sat as uncommitted working-tree changes from a prior
+  unattributed run plus this session's audit fixes on top of it.
+- Real gap: no fps has been measured in a real, unthrottled browser. Do not
+  treat anything in `docs/05-PERFORMANCE.md` as verified until that happens.

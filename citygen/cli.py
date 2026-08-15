@@ -1,4 +1,4 @@
-﻿"""citygen command line interface.
+"""citygen command line interface.
 
     python -m citygen build <repo> -o out/city.json [options]
     python -m citygen inspect out/city.json
@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import http.server
 import json
 import os
+import socketserver
 import sys
 import time
 
 from . import __version__
 from .build import build_city
+from .export_html import export_html
 from .walk import WalkOptions
 
 
@@ -33,7 +36,9 @@ def _cmd_build(a: argparse.Namespace) -> int:
         a.repo, opts, verbose=a.verbose,
         no_git=a.no_git, max_commits=a.max_commits, since=a.since,
         max_commit_files=a.max_commit_files, min_cochange=a.min_cochange,
-        world_size=a.world_size, street_width=a.street_width, height_scale=a.height_scale
+        world_size=a.world_size, street_width=a.street_width,
+        height_scale=a.height_scale,
+        snapshots=a.snapshots, ruins=not a.no_ruins,
     )
     dt = time.time() - t0
     city["build_seconds"] = round(dt, 3)
@@ -55,6 +60,11 @@ def _cmd_build(a: argparse.Namespace) -> int:
     print(f"[citygen] {city['repo']['name']}: {s['files']} files, "
           f"{s['loc']:,} LOC, {s['functions']} fns, "
           f"{s['import_edges']} import edges, {s['parse_errors']} parse errors")
+    snaps = city.get("snapshots")
+    if snaps:
+        ruins = sum(1 for b in city["buildings"] if b.get("deleted"))
+        print(f"[citygen] timeline: {snaps['count']} snapshots "
+              f"{snaps['labels'][0]} -> {snaps['labels'][-1]}, {ruins} ruins")
     print(f"[citygen] wrote {out} ({size/1024:.1f} KB) in {dt:.2f}s")
     return 0
 
@@ -118,6 +128,40 @@ def _cmd_inspect(a: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_export(a: argparse.Namespace) -> int:
+    from .export_html import export_html
+    try:
+        export_html(a.json_path, a.output)
+        return 0
+    except Exception as e:
+        print(f"Error exporting HTML: {e}", file=sys.stderr)
+        return 1
+
+
+def _cmd_serve(a: argparse.Namespace) -> int:
+    viewer_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viewer', 'dist')
+    if not os.path.exists(viewer_dist):
+        print("Error: viewer/dist not found. Did you run 'npm run build'?", file=sys.stderr)
+        return 1
+
+    import shutil
+    if a.json_path and os.path.exists(a.json_path):
+        shutil.copy(a.json_path, os.path.join(viewer_dist, 'city.json'))
+        print(f"Copied {a.json_path} to viewer/dist/city.json")
+
+    os.chdir(viewer_dist)
+    Handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", a.port), Handler) as httpd:
+        print(f"Serving at http://localhost:{a.port}")
+        try:
+            import webbrowser
+            webbrowser.open(f"http://localhost:{a.port}")
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="citygen",
                                 description="Chronopolis repository analyzer")
@@ -144,11 +188,25 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--world-size", type=float, default=400.0, help="layout world size")
     b.add_argument("--street-width", type=float, default=2.0, help="district street width")
     b.add_argument("--height-scale", type=float, default=2.6, help="building height scale multiplier")
+    b.add_argument("--snapshots", type=int, default=24,
+                   help="history snapshots for the timeline (0 disables)")
+    b.add_argument("--no-ruins", action="store_true",
+                   help="omit deleted files instead of rendering them as ruins")
     b.set_defaults(func=_cmd_build)
 
     i = sub.add_parser("inspect", help="print a summary of a city.json")
     i.add_argument("city")
     i.set_defaults(func=_cmd_inspect)
+
+    e = sub.add_parser("export", help="Export city JSON as a self-contained HTML file")
+    e.add_argument("json_path", help="Path to the input city.json")
+    e.add_argument("-o", "--output", required=True, help="Path for the output HTML file")
+    e.set_defaults(func=_cmd_export)
+
+    s = sub.add_parser("serve", help="Serve the viewer locally")
+    s.add_argument("json_path", nargs="?", help="Path to city.json to serve")
+    s.add_argument("--port", type=int, default=8000, help="Port to serve on")
+    s.set_defaults(func=_cmd_serve)
 
     a = p.parse_args(argv)
     return a.func(a)

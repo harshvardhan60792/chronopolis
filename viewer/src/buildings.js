@@ -39,6 +39,11 @@ export function createBuildings(buildings, plots) {
     const n = buildings.length;
     const seeds = new Float32Array(n);
     const litness = new Float32Array(n);
+    const pulses = new Float32Array(n);
+
+    // Compute 95th percentile of health
+    const healths = buildings.map(b => b.health || 0).sort((a, b) => a - b);
+    const h95 = healths.length > 0 ? healths[Math.floor(healths.length * 0.95)] : 0;
 
     const mat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -65,16 +70,22 @@ export function createBuildings(buildings, plots) {
                 #include <common>
                 attribute float aSeed;
                 attribute float aLit;
+                attribute float aPulse;
+                attribute float aDim;
                 varying vec3 vLocal;
                 varying vec3 vSize;
                 varying float vSeed;
                 varying float vLit;
+                varying float vPulse;
+                varying float vDim;
             `)
             .replace('#include <begin_vertex>', /* glsl */`
                 #include <begin_vertex>
                 vLocal = position;
                 vSeed = aSeed;
                 vLit = aLit;
+                vPulse = aPulse;
+                vDim = aDim;
                 // Recover this instance's world dimensions from its matrix so
                 // the window grid stays a constant real-world size instead of
                 // stretching with the building.
@@ -98,6 +109,8 @@ export function createBuildings(buildings, plots) {
                 varying vec3 vSize;
                 varying float vSeed;
                 varying float vLit;
+                varying float vPulse;
+                varying float vDim;
 
                 float hash21(vec2 p, float s) {
                     p = fract(p * vec2(233.34, 851.73) + s * 17.31);
@@ -151,8 +164,17 @@ export function createBuildings(buildings, plots) {
                     // what every overlay mode encodes - fully readable.
                     gl_FragColor.rgb *= 1.0 - 0.22 * pane * sideness * (1.0 - uNight);
 
+                    // ADR-012 is explicit: no pulsing, anywhere, ever - it is
+                    // exactly the kind of ambient peripheral motion that made
+                    // the pre-calm-pass version tiring to look at. Hotspots
+                    // (top 5% health) get a STATIC warm rim instead: visible
+                    // on inspection, invisible to the "am I being pinged"
+                    // reflex that an animated pulse triggers.
+                    gl_FragColor.rgb += vec3(vPulse * 0.14, 0.0, 0.0);
+
                     gl_FragColor.rgb += tint * glow * 1.05;
                     gl_FragColor.rgb *= 1.0 - 0.25 * sideness * uNight * (1.0 - pane) * step(uWindowH, up);
+                    gl_FragColor.rgb *= vDim;
                 }
             `);
     };
@@ -171,8 +193,13 @@ export function createBuildings(buildings, plots) {
         const plot = plots[i];
         if (!plot) continue;
 
+        // Deleted files get a plot so the timeline layout stays stable
+        // (ADR-003) but must not appear as an ordinary building outside the
+        // timeline - the repo does not have this file any more. The time
+        // machine (timeline.js) is what reveals them, as ruins, mid-history.
+        const h = b.deleted ? 0.0001 : plot.h;
         dummy.position.set(plot.x + plot.w / 2, 0, plot.z + plot.d / 2);
-        dummy.scale.set(plot.w, plot.h, plot.d);
+        dummy.scale.set(plot.w, h, plot.d);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
 
@@ -192,10 +219,14 @@ export function createBuildings(buildings, plots) {
         const alive = b.stale_days == null ? 0.35
             : 1 - Math.min(1, b.stale_days / 540);
         litness[i] = 0.13 + 0.26 * density + 0.16 * alive;
+        
+        pulses[i] = (b.health || 0) >= h95 && (b.health || 0) > 0 ? 1.0 : 0.0;
     }
 
     geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
     geo.setAttribute('aLit', new THREE.InstancedBufferAttribute(litness, 1));
+    geo.setAttribute('aPulse', new THREE.InstancedBufferAttribute(pulses, 1));
+    geo.setAttribute('aDim', new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1.0), 1));
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;

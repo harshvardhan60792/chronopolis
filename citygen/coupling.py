@@ -50,7 +50,7 @@ def calculate_cochange(commits: list[list[int]], buildings: list[dict], import_e
     for score, i, j, c_ij, strength in cochange_scored:
         cochange_out.append([i, j, c_ij, strength])
         if i in analyzable and j in analyzable and (i, j) not in import_pairs:
-            hidden_candidates.append([i, j, strength])
+            hidden_candidates.append([i, j, strength, c_ij])
             
     cochange_out.sort(key=lambda x: (x[0], x[1]))
     

@@ -123,6 +123,25 @@ def walk_repo(root: str, opts: WalkOptions | None = None) -> list[FileRec]:
     return files
 
 
+def is_source_path(rel: str) -> bool:
+    """Would `walk_repo` have rendered this path, judged from the path alone?
+
+    Used for paths that no longer exist on disk (deleted files recovered from
+    git history), where stat and content are unavailable.
+    """
+    parts = rel.split("/")
+    if any(p in DEFAULT_DENY_DIRS for p in parts[:-1]):
+        return False
+    name = parts[-1]
+    for pat in DEFAULT_DENY_FILE_GLOBS:
+        if fnmatch.fnmatch(name, pat):
+            return False
+    ext = os.path.splitext(name)[1].lower()
+    if ext in BINARY_EXTS:
+        return False
+    return ext in EXT_LANG
+
+
 def read_text(path: str) -> str | None:
     """Read source as text; None if it is not decodable (treat as binary)."""
     try:

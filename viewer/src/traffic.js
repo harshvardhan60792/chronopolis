@@ -49,6 +49,13 @@ export function createTraffic(cityData, density = 0.6) {
     
     const dataTexture = new THREE.DataTexture(texData, K, roadCount, THREE.RGBAFormat, THREE.FloatType);
     dataTexture.needsUpdate = true;
+
+    // One texel per road: 1 = drawn, 0 = hidden. Lets the timeline mute
+    // traffic on roads whose endpoints have not been born yet (or are dead)
+    // without touching per-particle attributes every snapshot.
+    const aliveData = new Float32Array(roadCount * 4).fill(1);
+    const aliveTexture = new THREE.DataTexture(aliveData, roadCount, 1, THREE.RGBAFormat, THREE.FloatType);
+    aliveTexture.needsUpdate = true;
     
     const minP = 1;
     const maxP = 14;
@@ -99,6 +106,7 @@ export function createTraffic(cityData, density = 0.6) {
     
     const vertexShader = `
         uniform sampler2D uPaths;
+        uniform sampler2D uAlive;
         uniform float uTime;
         uniform float uSpeedScale;
         uniform float uLaneWidth;
@@ -128,8 +136,10 @@ export function createTraffic(cityData, density = 0.6) {
             pos += vec3(-dir.z, 0.0, dir.x) * aSide * uLaneWidth;
             pos.y += uRideHeight;
             
+            float alive = texelFetch(uAlive, ivec2(int(aRoad), 0), 0).r;
+
             vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-            gl_PointSize = uSize * (300.0 / -mvPosition.z);
+            gl_PointSize = uSize * (300.0 / -mvPosition.z) * alive;
             gl_Position = projectionMatrix * mvPosition;
             
             vOffset = aOffset;
@@ -158,6 +168,7 @@ export function createTraffic(cityData, density = 0.6) {
         fragmentShader,
         uniforms: {
             uPaths: { value: dataTexture },
+            uAlive: { value: aliveTexture },
             uTime: { value: 0 },
             uSpeedScale: { value: 0.05 },
             uLaneWidth: { value: 0.2 },
@@ -176,6 +187,16 @@ export function createTraffic(cityData, density = 0.6) {
     function update(time) {
         mat.uniforms.uTime.value = time;
     }
-    
-    return { points, update };
+
+    /** Called on timeline change, not per frame: recompute which roads carry
+     *  traffic given `isVisible(buildingIndex)`. */
+    function updateAliveMask(isVisible) {
+        for (let i = 0; i < roadCount; i++) {
+            const alive = isVisible(roads[i].a) && isVisible(roads[i].b) ? 1 : 0;
+            aliveData[i * 4] = alive;
+        }
+        aliveTexture.needsUpdate = true;
+    }
+
+    return { points, update, updateAliveMask };
 }

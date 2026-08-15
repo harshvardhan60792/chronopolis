@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Run backend tests
+      # NOT `unittest discover`: test_phase1.py and test_invariants.py are
+      # standalone scripts (bare `test_*` functions with their own runner,
+      # documented in docs/06-TESTING.md), not unittest.TestCase subclasses.
+      # `unittest discover` silently finds zero tests in them - confirmed by
+      # running it locally: 13 tests ran instead of the real 30, and the two
+      # skipped files carry the invariant checks (plot overlap, determinism,
+      # no-NaN) that matter most. Running each file directly is what actually
+      # executes all of them and honours their exit codes.
+      run: |
+        set -e
+        for f in citygen/tests/test_*.py; do
+          echo "== $f =="
+          python "$f"
+        done
+
+    - name: Build toyrepo city
+      run: python -m citygen build fixtures/toyrepo -o out/city.json
+
+    - name: Assert invariants
+      run: python -m citygen inspect out/city.json
+
+    - name: Set up Node 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Build viewer
+      working-directory: ./viewer
+      run: |
+        npm ci
+        npm run build
+
+    - name: Viewer selftest (headless)
+      # We would run a headless browser test here against ?selftest=1
+      # e.g., using puppeteer or playwright to verify SELFTEST OK is printed.
+      run: echo "Selftest pending headless browser setup"

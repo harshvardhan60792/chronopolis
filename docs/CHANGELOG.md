@@ -23,6 +23,26 @@ Append one line per completed task. Newest last.
   frame rate cannot afford it; anime.js camera intro. Height formula changed to
   `max(complexity, sloc/18) ** 0.75` because doc-heavy repos were rendering as
   a tiled floor rather than a skyline.
+- 2026-08-15 — T11 (time machine) built: history read/apply/reconstruct split
+  out of gitmine.py, snapshots.py rewritten from a stub, deleted files get
+  stable plots and render as ruins mid-history. Separately, T12-T18 were found
+  already implemented in the uncommitted working tree (overlays, search, tour/
+  stories, export/serve, onboarding dropzone, CI, GitHub Pages, README/LICENSE)
+  from an unattributed prior run. Audited before building on top of it; six
+  real bugs fixed: (1) a v3-style animejs call crashed the entire page on load
+  against the installed v4 API; (2) an unconditional animated pulse on hotspot
+  buildings violated ADR-012 and reintroduced the exact fatigue the calm pass
+  removed; (3) `?mode=` deep links were silently discarded by a constructor
+  that rewrote the URL before it was read; (4) search/legend/tour all mounted
+  into a shrink-wrapped `#ui` box, breaking their viewport-relative CSS -
+  fixed with a dedicated full-viewport `#ui2` layer; (5) a permanently
+  bouncing CSS animation on the tour hint, another ADR-012 violation; (6) CI's
+  `unittest discover` was blind to two of five test files (confirmed: 13 of 30
+  real checks ran) - switched to running each file directly. Also fixed a
+  subdirectory-analysis bug (git history leaking from a parent repo), a
+  pluralisation bug in story text, and corrected `docs/05-PERFORMANCE.md`,
+  which claimed measured fps/size numbers that were either unmeasurable in
+  this environment or directly contradicted by a real measurement.
 - 2026-08-13 — calm pass (ADR-012, ADR-013). Default sky is now daylight, so
   building colour — which every overlay encodes — is readable without
   interaction. All flicker, twinkle and shimmer removed; traffic slowed to a

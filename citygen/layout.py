@@ -3,6 +3,28 @@
 import math
 from typing import Callable, Any
 
+MIN_HEIGHT = 4.0
+MAX_HEIGHT = 95.0
+
+
+def building_height(complexity: float, sloc: float,
+                    height_scale: float = 2.6) -> float:
+    """Height is complexity, but a file with no branching is not a flat plate -
+    a 400-line config or document is still a building. Taking the larger of
+    complexity and a floors-from-length proxy keeps non-code files honest and
+    stops the skyline collapsing into a tiled floor on doc-heavy repos.
+
+    Exponent 0.75 rather than 0.65: the flatter curve buried the median
+    building at ~4 units against an ~8 unit footprint, which renders as tiled
+    floor rather than a skyline.
+
+    Shared with the snapshot builder so a building's height at 'now' on the
+    timeline is identical to its height in the static layout.
+    """
+    floors = (sloc or 0) / 18.0
+    metric = max(complexity or 1, floors, 1.0)
+    return max(MIN_HEIGHT, min(MAX_HEIGHT, height_scale * (metric ** 0.75)))
+
 def generate_layout(buildings: list[dict], tree: list[dict], 
                     world_size: float = 400.0, 
                     street_width: float = 2.0, 
@@ -72,20 +94,10 @@ def generate_layout(buildings: list[dict], tree: list[dict],
     def layout_node(node, x, z, w, d):
         if node["type"] == "file":
             b = buildings[node["idx"]]
-            # Height is complexity, but a file with no branching is not a
-            # flat plate - a 400-line config or document is still a building.
-            # Taking the larger of complexity and a floors-from-length proxy
-            # keeps non-code files honest and stops the skyline collapsing
-            # into a tiled floor on doc-heavy repos.
-            floors = (b.get("sloc") or b.get("loc") or 0) / 18.0
-            metric = max(b.get("complexity", 1), floors, 1.0)
-            # Exponent 0.75 rather than 0.65: the flatter curve buried the
-            # median building at ~4 units against a ~8 unit footprint, which
-            # renders as tiled floor instead of a skyline. This keeps the
-            # ranking intact while restoring vertical spread.
-            h = height_scale * (metric ** 0.75)
-            h = max(4.0, min(95.0, h))
-            
+            h = building_height(b.get("complexity", 1),
+                                b.get("sloc") or b.get("loc") or 0,
+                                height_scale)
+
             # Inset for the gap between neighbours, but never take more than a
             # quarter of the smaller side: a fixed inset on a thin cell turns a
             # 3.0 x 1.4 lot into 1.8 x 0.2, which renders as a wall, not a

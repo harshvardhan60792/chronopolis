@@ -1,74 +1,70 @@
 # Chronopolis
 
-**Your repository as a living city you can rewind.**
+See your codebase as a living city, where architecture reflects reality, complexity is visible, and the true cost of changes becomes clear.
 
-Chronopolis reads any git repository and renders it as an explorable 3D city:
-every file is a building, every folder a district, imports are roads, and
-*traffic flows along those roads based on which files actually change together
-in git history*. Drag the timeline and the city rebuilds itself commit by
-commit — watch districts rise, hotspots catch fire, and abandoned code decay.
+![Hero Image](docs/img/hero.png)
 
-100% local. No AI, no API keys, no backend, no telemetry. A Python CLI produces
-one `city.json`; a static three.js page renders it. Free to build, free to host,
-free forever.
+## Why Chronopolis?
+Traditional static analysis tools output lists and graphs. Chronopolis uses a spatial metaphor to expose the structural health of your repository at a glance. 
 
----
+- **Scale & Density:** The footprint of a building maps to its lines of code, and its height maps to its function count. You can literally *see* monolithic god classes looming over everything else.
+- **Connections:** Inter-file imports manifest as soaring arcs across the skyline. Files that frequently change together pulse with traffic flow on the streets between them.
+- **History & Churn:** Time is a first-class citizen. Code that hasn't been touched in years turns grey and cold, while hotspots in active development glow with heat.
+- **Narrative:** Chronopolis doesn't just draw blocks; it automatically extracts narrative insights—like the fastest growing file, the biggest flight-risk (bus factor of 1), and hidden coupling.
 
-## Why this is not "another CodeCity"
-
-Software-city visualizations exist (Wettel's CodeCity, SoftVis3D, code-city
-ports). Every one of them renders **one static snapshot of structure**.
-Chronopolis adds four layers nobody has shipped together:
-
-| Layer | What it shows | Why it is new |
-|---|---|---|
-| **Time machine** | Scrub git history; buildings grow/shrink/appear/vanish with a stable layout so the city never reshuffles | Existing city tools are single-snapshot; Gource shows history but as abstract 2D particles, not a legible city |
-| **Traffic simulation** | Animated vehicles on the roads, volume = *temporal coupling* (how often two files change in the same commit) | Static import graphs miss the real coupling. Traffic makes hidden dependencies visible as congestion |
-| **Urban decay & fire** | Material state from churn × complexity × age × ownership concentration | Turns four separate metrics into one glanceable "is this neighborhood healthy" read |
-| **Postcards** | One self-contained HTML file (city embedded) + PNG export | Shareable with zero hosting — the viral loop |
-
-The result is a comprehension tool that also happens to be the best-looking
-thing anyone will see in your repo.
-
----
-
-## Status
-
-Phase 1 (parser) is **built and verified**. Everything else is specified and
-waiting. See [`STATUS.md`](STATUS.md) — it is the single source of truth for
-what is done.
-
-## Quick start (what works today)
+## 60-Second Quickstart
 
 ```bash
-python -m citygen build /path/to/repo -o out/city.json
+# Clone the repository
+git clone https://github.com/your-username/chronopolis.git
+cd chronopolis
+
+# Analyze your own repository (requires Python 3.11+)
+python -m citygen build /path/to/your/repo -o my-city.json
+
+# Serve the visualizer and explore your city
+python -m citygen serve my-city.json
 ```
 
-```bash
-python -m citygen inspect out/city.json
-```
+## CLI Reference
 
-Verified output on a real repo (`reachable`, 39 files):
+`python -m citygen build <repo>` - Analyzes the given directory.
+- `--include-vendor`: Do not skip node_modules/.venv/dist/...
+- `--python-only`: Only analyze Python files.
+- `--max-commits <N>`: Limit git history parsing to N commits.
+- `--snapshots <N>`: Set the number of time-machine snapshots to capture (default 24).
+- `--gzip`: Output a `.json.gz` file instead of uncompressed JSON.
 
-```
-files       39   dirs 11   LOC 5,286
-python      20 files, 222 fns, 13 classes, complexity 920
-edges       import=37  parse_errors=0
-```
+`python -m citygen export <json> -o <out.html>`
+Generates a zero-dependency, self-contained HTML file from your `city.json` that you can email to your team or host on GitHub Pages.
 
-## Repo map
+`python -m citygen serve <json>`
+Serves the viewer locally and automatically copies your city into it.
 
-```
-citygen/     Python analyzer + CLI (stdlib only, no dependencies)
-viewer/      Vite + three.js static frontend
-docs/        vision, architecture, data schema, decisions, perf, testing
-tasks/       one file per build task - the executable plan
-fixtures/    toyrepo used by tests
-out/         generated city.json files (gitignored)
-```
+## How to Read the City
 
-## For AI agents / contributors
+- **Height:** The number of functions/methods in the file.
+- **Footprint:** The total Lines of Code (LOC).
+- **Colour (Modes 1-6):** Use the number keys to switch the overlay. You can view by Primary Language, Health (Hotspots pulse red), Recency (cold to warm), Ownership, Bus Factor, and Complexity.
+- **Arcs (Press `I`):** Direct import dependencies. The arc goes from the importer to the imported file.
+- **Traffic (Press `T`):** Files that frequently change together in git history are connected by glowing traffic paths.
 
-Read [`AGENTS.md`](AGENTS.md) first. It defines the handoff protocol: how to
-find the next task, what "done" means, and what you may not change without
-writing an ADR.
+## Performance
+
+The architecture is designed for 60 fps on 1000+ file repositories (one draw
+call per layer, regardless of file count — see `docs/01-ARCHITECTURE.md`), but
+that number has not yet been measured in a real browser and should be treated
+as a target, not a verified result, until `docs/05-PERFORMANCE.md` says
+otherwise.
+
+## Limitations
+
+- **Deep Parsing:** Abstract Syntax Tree (AST) deep parsing is currently limited to Python files. Other languages fall back to regex heuristics for imports and complexity.
+- **History Approximation:** We capture git snapshots, not every single commit line-by-line, to keep the analysis under 10 seconds.
+- **Ownership:** "Bus factor" and "Ownership" are calculated based on commit counts to a file, not precise blame-based line ownership.
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+*Powered by [three.js](https://threejs.org/) (MIT).*

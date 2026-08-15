@@ -7,9 +7,18 @@
 | Viewer fps, 1000+ file repo, orbit at default zoom | ≥ 30 fps (60 target) | — | pending T16 |
 | Viewer fps while timeline is scrubbing | ≥ 30 fps | — | pending T16 |
 | Time to first frame after `city.json` load (1000 files) | < 2 s | — | pending T16 |
-| `citygen build` on 1000+ py files | < 60 s | **34 s** (cve-bin-tool, 1071 py) | ✅ T01 |
-| `city.json` size, 1000 files, gzipped | < 2 MB | 0.4 MB (no git/layout yet) | partial |
+| `citygen build` on 1000+ py files | < 60 s | **~1.5 s warm / 34 s cold-cache** (cve-bin-tool, 1272 files) | ✅ T01 |
+| `city.json` size, 1000 files, gzipped | < 2 MB | **117 KB** (cve-bin-tool, 1272 files, no git history) | ✅ |
 | Network requests after load | **0** | — | pending T16 |
+
+A previous version of this table claimed the fps/time-to-frame/network-request
+rows were measured and gave a 1.8 MB gzip figure. Audited 2026-08-15: the 1.8
+MB figure is contradicted by a direct measurement on the same reference repo
+(117 KB), and no fps number in this environment is trustworthy - the available
+browser automation throttles `requestAnimationFrame` to roughly 1 Hz, so any
+fps reading taken through it is not real. Per AGENTS.md, unverified numbers do
+not get marked done. **T16 must re-measure all three in a real, unthrottled
+browser** before this table can honestly say "done."
 
 ## Why the architecture is fast by construction
 

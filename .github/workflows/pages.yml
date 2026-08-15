@@ -1,0 +1,66 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build Demo Cities
+        # Labelled honestly for what they are: no external repo is available
+        # in this runner (no network fetch step), so a mismatched label here
+        # - e.g. calling the toy fixture "reachable", or this project's own
+        # ~100-file codebase "cve-bin-tool" - would just be a smaller and a
+        # larger lie. Self-hosting the demo on Chronopolis's own repo is an
+        # honest choice: it is a real mid-size Python+JS project with real
+        # git history, and "the tool mapping itself" is a legitimate demo.
+        run: |
+          mkdir -p viewer/public
+          python -m citygen build fixtures/toyrepo -o viewer/public/toyrepo.city.json
+          python -m citygen build . -o viewer/public/chronopolis.city.json
+
+      - name: Build viewer
+        working-directory: ./viewer
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './viewer/dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

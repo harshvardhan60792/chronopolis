@@ -2,7 +2,7 @@ export function initUI() {
     const ui = document.getElementById('ui');
     ui.innerHTML = `
         <div id="controls-hint" style="background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 4px; transition: opacity 0.3s; font-size: 13px;">
-            <span id="hint-orbit">drag orbit · scroll zoom · F fly · K sky · B bloom · I arcs · T traffic</span>
+            <span id="hint-orbit">drag orbit · scroll zoom · F fly · K sky · B bloom · I arcs · T traffic · space history</span>
             <span id="hint-fly" class="hidden">WASD move · mouse look · Space/Shift up-down · F exit · K sky · I arcs · T traffic</span>
         </div>
         <div id="sky-legend" class="legend" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
@@ -22,6 +22,12 @@ export function initUI() {
     window.addEventListener('keydown', (e) => {
         if (e.key.toLowerCase() === 'h') {
             ui.classList.toggle('hidden');
+            // #ui2 hosts search/legend/tour - a separate full-viewport layer
+            // (see index.html) so their absolute positioning resolves against
+            // the real viewport instead of #ui's small auto-sized box. H is
+            // meant to clear the screen for a screenshot, so both must hide.
+            const ui2 = document.getElementById('ui2');
+            if (ui2) ui2.classList.toggle('hidden');
         }
     });
 }

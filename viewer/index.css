@@ -1,0 +1,226 @@
+
+/* Legend panel */
+.legend-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 320px;
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eee;
+    padding: 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    z-index: 100;
+    pointer-events: none;
+}
+.legend-panel h3 {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+}
+.legend-desc {
+    margin-top: 8px;
+    color: #aaa;
+    line-height: 1.4;
+}
+.legend-gradient {
+    height: 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+.health-gradient {
+    background: linear-gradient(to right, #3db55c, #f5b231 95%, #df352b 100%);
+}
+.viridis-gradient {
+    background: linear-gradient(to right, #3a0d59, #31648a, #1fb589, #f6e846);
+}
+.legend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #888;
+}
+
+/* Search component */
+#search-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 480px;
+    z-index: 200;
+}
+#search-input {
+    width: 100%;
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 15px;
+    outline: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    transition: border-color 0.2s;
+}
+#search-input:focus {
+    border-color: #66b2ff;
+}
+#search-results {
+    margin-top: 8px;
+    background: rgba(15, 15, 15, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.search-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.search-item:last-child {
+    border-bottom: none;
+}
+.search-item.selected, .search-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.search-path {
+    color: #eee;
+    font-size: 13px;
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.search-meta {
+    color: #888;
+    font-size: 11px;
+    margin-top: 4px;
+}
+#search-status {
+    position: absolute;
+    right: 12px;
+    top: 14px;
+    color: #888;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+/* Tour component */
+.tour-card {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 15, 15, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    z-index: 150;
+    min-width: 320px;
+    max-width: 600px;
+}
+.tour-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+.tour-actions button {
+    padding: 8px 16px;
+    background: #333;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.tour-actions button#tour-start-btn {
+    background: #4285F4;
+    border-color: #4285F4;
+}
+.tour-progress {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.tour-text {
+    font-size: 18px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+.tour-hints {
+    font-size: 12px;
+    color: #777;
+}
+
+/* Findings button. bottom:90px, not 20px: clears the timeline bar, which
+   sits at bottom:18px and is ~60px tall - at 20px they overlapped on any
+   viewport narrower than about 1000px. */
+#tour-findings-btn {
+    position: absolute;
+    bottom: 90px;
+    right: 20px;
+    background: rgba(15, 15, 15, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 100;
+}
+#tour-findings-list {
+    position: absolute;
+    bottom: 130px;
+    right: 20px;
+    width: 320px;
+    background: rgba(15, 15, 15, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 8px 0;
+    z-index: 100;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.finding-item {
+    padding: 12px 16px;
+    color: #eee;
+    font-size: 13px;
+    line-height: 1.4;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+}
+.finding-item:last-child {
+    border-bottom: none;
+}
+.finding-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+.finding-item strong {
+    color: #fff;
+    text-transform: capitalize;
+}
+/* ADR-012: no ambient motion anywhere - an earlier version of this hint had
+   `animation: bounce 1.5s infinite`, a permanent side-to-side shimmy from the
+   moment the page loads. That is exactly the peripheral-motion fatigue the
+   calm pass exists to remove (see the pulse fix in buildings.js). Static,
+   still findable via the "Start here" wording and its colour. */
+#tour-findings-hint {
+    position: absolute;
+    bottom: 95px;
+    right: 140px;
+    color: #4285F4;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+}

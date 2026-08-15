@@ -157,4 +157,6 @@ export function setupPicking(camera, renderer, scene, cityData, buildingsMesh, a
             select(-1);
         }
     });
+    
+    return { select };
 }

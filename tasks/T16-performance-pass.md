@@ -6,6 +6,26 @@
 Prove, with recorded numbers, that a 1000+ file repository holds ≥ 30 fps with
 every layer on — and fix it if it does not.
 
+## Note on measurement environment (2026-08-15)
+
+This project's `requestAnimationFrame` cannot be trusted for fps measurement
+inside this session's browser automation pane - it is throttled to roughly
+1 Hz, which silently produces fake numbers if you don't notice. A previous
+session's `docs/05-PERFORMANCE.md` entry had fabricated-looking 60 fps figures
+that could not be reproduced and one figure (gzip size) was flatly
+contradicted by direct measurement; both were reset to "pending" rather than
+trusted. **Do not fill in this table from a throttled environment.**
+
+A real, unthrottled headless browser is the fix. An abandoned attempt at this
+(`viewer/test-browser.mjs`, using Puppeteer) was found in the tree and removed
+- it was broken (`puppeteer` was never added as a devDependency, so the import
+fails immediately) and not worth carrying forward as-is, but the approach is
+right: `npm i -D puppeteer`, launch headless Chromium, `page.goto` the built
+preview with `?selftest=1`, and read the fps that `viewer/src/selftest.js`
+already computes and logs (`SELFTEST OK <fps> fps`). That harness already
+exists and already asserts real invariants (see its 8 checks) - it just needs
+a real browser driving it instead of this session's pane.
+
 ## Procedure
 Follow `docs/05-PERFORMANCE.md` exactly and write the measured numbers into its
 table with date, GPU and browser. Five scenarios, 10 s each:

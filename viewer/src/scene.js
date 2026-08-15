@@ -12,6 +12,13 @@ import { createNature } from './nature.js';
 import { createClouds } from './clouds.js';
 import { createPostFX } from './postfx.js';
 import { playIntro } from './intro.js';
+import { createTimeline } from './timeline.js';
+import { mountTimeline } from './timelineui.js';
+import { OverlayManager, MODES } from './overlays.js';
+import { Legend } from './legend.js';
+import { Search } from './search.js';
+import { Tour } from './tour.js';
+import { exportPNG } from './export.js';
 
 export function initScene(cityData) {
     const world = cityData.layout.world;
@@ -79,6 +86,22 @@ export function initScene(cityData) {
     const postfx = createPostFX(renderer, scene, camera);
     updateSkyLegend(SKY_PRESETS[0].label, postfx.enabled);
 
+    // Must read the ORIGINAL query string before constructing anything that
+    // rewrites it (OverlayManager does, via setMode's replaceState) - see the
+    // comment in overlays.js.
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    let initialMode = 1;
+    if (modeParam) {
+        for (const [id, m] of Object.entries(MODES)) {
+            if (m.key === modeParam) initialMode = parseInt(id);
+        }
+    }
+
+    const overlays = new OverlayManager(cityData, buildingsMesh, initialMode);
+    const legend = new Legend(document.getElementById('ui2'), cityData);
+    legend.render(initialMode);
+
     // Keep every look-dependent uniform in one place so a sky change updates
     // the buildings and the street in the same frame.
     const facade = buildingsMesh.userData.uniforms;
@@ -111,10 +134,18 @@ export function initScene(cityData) {
             updateSkyLegend(preset.label, postfx.enabled);
         } else if (k === 'b') {
             updateSkyLegend(sky.state.preset.label, postfx.toggle());
+        } else if (k === 'p') {
+            exportPNG(cityData, renderer, scene, camera, postfx, overlays, timeline);
+        }
+        
+        const modeNum = parseInt(k);
+        if (modeNum >= 1 && modeNum <= 6) {
+            overlays.setMode(modeNum);
+            legend.render(modeNum);
         }
     });
 
-    setupPicking(camera, renderer, scene, cityData, buildingsMesh, arcsData, controls);
+    const picking = setupPicking(camera, renderer, scene, cityData, buildingsMesh, arcsData, controls);
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -124,9 +155,46 @@ export function initScene(cityData) {
     });
 
     window.flyTo = controls.flyTo;
+
+    const search = new Search(cityData, controls, buildingsMesh);
+    const tour = new Tour(cityData, controls, buildingsMesh);
+
+    const timeline = createTimeline(cityData, buildingsMesh);
+    if (timeline) {
+        mountTimeline(timeline);
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey) timeline.toNow();
+        });
+
+        // Arcs and traffic must not show relationships for files that do not
+        // exist yet on the timeline. Runs once per snapshot change (a few
+        // times a second at most while playing), never per frame.
+        const importEdges = cityData.edges.import || [];
+        timeline.onChange = () => {
+            if (arcsData && importEdges.length) {
+                const colorAttr = arcsData.mesh.geometry.attributes.color;
+                const defAttr = arcsData.mesh.geometry.attributes.defaultColor;
+                for (let idx = 0; idx < importEdges.length; idx++) {
+                    const start = arcsData.arcSegmentRange[idx * 2];
+                    const end = arcsData.arcSegmentRange[idx * 2 + 1];
+                    if (start < 0) continue;   // truncated out of the mesh
+                    const [a, b] = importEdges[idx];
+                    const mult = (timeline.isVisible(a) && timeline.isVisible(b)) ? 1 : 0;
+                    for (let v = start; v <= end; v++) {
+                        colorAttr.array[v * 3] = defAttr.array[v * 3] * mult;
+                        colorAttr.array[v * 3 + 1] = defAttr.array[v * 3 + 1] * mult;
+                        colorAttr.array[v * 3 + 2] = defAttr.array[v * 3 + 2] * mult;
+                    }
+                }
+                colorAttr.needsUpdate = true;
+            }
+            if (trafficData) trafficData.updateAliveMask(timeline.isVisible);
+        };
+    }
+
     window.__CHRONOPOLIS__ = {
         city: cityData, scene, camera, renderer,
-        buildingsMesh, arcsData, trafficData, controls, sky, postfx,
+        buildingsMesh, arcsData, trafficData, controls, sky, postfx, timeline, picking,
     };
 
     playIntro(camera, controls, world);
@@ -155,11 +223,14 @@ export function initScene(cityData) {
         }
 
         controls.update();
+        if (timeline) timeline.update(now);
         facade.uTime.value = t;
         sea.uTime.value = t;
         clouds.userData.update(t);
         sky.update(t);
         if (trafficData && trafficData.points.visible) trafficData.update(t);
+
+        overlays.update();
 
         postfx.render();
     }

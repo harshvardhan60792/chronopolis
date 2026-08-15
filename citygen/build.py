@@ -1,4 +1,4 @@
-﻿"""Assemble a city document from a repository.
+"""Assemble a city document from a repository.
 
 Phase 1 scope (implemented): tree, buildings with metrics, intra-repo import
 edges, aggregate stats.
@@ -16,12 +16,16 @@ import os
 import subprocess
 
 from . import SCHEMA, __version__
-from .gitmine import mine_git_history
+from .gitmine import (apply_history, last_commit_ts, read_history,
+                      reconstruct_timeline)
 from .coupling import calculate_cochange
 from .layout import generate_layout
 from .metrics import generic_metrics, python_metrics
 from .resolve import ModuleIndex
-from .walk import FileRec, WalkOptions, read_text, walk_repo
+from .snapshots import compute_snapshots
+from .stories import generate_stories
+from .walk import (EXT_LANG, FileRec, WalkOptions, is_source_path, read_text,
+                   walk_repo)
 
 
 def _git(root: str, *args: str) -> str | None:
@@ -93,7 +97,9 @@ def build_city(root: str, opts: WalkOptions | None = None,
                min_cochange: int = 3,
                world_size: float = 400.0,
                street_width: float = 2.0,
-               height_scale: float = 2.6) -> dict:
+               height_scale: float = 2.6,
+               snapshots: int = 24,
+               ruins: bool = True) -> dict:
     opts = opts or WalkOptions()
     files: list[FileRec] = walk_repo(root, opts)
     if verbose:
@@ -103,9 +109,10 @@ def build_city(root: str, opts: WalkOptions | None = None,
     index = ModuleIndex(py_paths)
 
     buildings: list[dict] = []
-    by_path: dict[str, int] = {}
     parse_errors: list[dict] = []
-    pending_imports: list[tuple[int, list, str]] = []
+    # Keyed by path, not by index: ruins get inserted below and the array is
+    # re-sorted, so any index captured during this pass would be wrong.
+    pending_imports: list[tuple[str, list]] = []
 
     for f in files:
         text = read_text(f.abs)
@@ -142,15 +149,56 @@ def build_city(root: str, opts: WalkOptions | None = None,
                 b["complexity"] = pr.complexity
                 b["max_fn_complexity"] = pr.max_func_complexity
                 b["doc_ratio"] = round(pr.doc_lines / gm["loc"], 3) if gm["loc"] else 0.0
-                pending_imports.append((len(buildings), pr.imports, f.rel))
+                pending_imports.append((f.rel, pr.imports))
             else:
                 parse_errors.append({"path": f.rel, "error": pr.error})
-        by_path[f.rel] = len(buildings)
         buildings.append(b)
+
+    # ---- git history, and the ruins it reveals ------------------------------
+    history: list[dict] = []
+    git_meta: dict = {}
+    timeline: dict[str, dict] = {}
+    if not no_git:
+        h, git_meta = read_history(root, max_commits, since, max_commit_files)
+        history = h or []
+        if history:
+            timeline = reconstruct_timeline(history)
+
+    live = {b["path"] for b in buildings}
+    if ruins and timeline:
+        # Files that existed once and do not now still shaped this codebase.
+        # They get plots so the layout is stable across the whole timeline
+        # (ADR-003) and render as ruins at 'now' (ADR-008). Without them the
+        # city would reshuffle every time you scrubbed the clock.
+        for path, rec in sorted(timeline.items()):
+            if path in live or not is_source_path(path):
+                continue
+            if rec["died"] is None or rec["max_loc"] <= 0:
+                continue
+            ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
+            buildings.append({
+                "id": path, "path": path, "name": path.rsplit("/", 1)[-1],
+                "dir": path.rsplit("/", 1)[0] if "/" in path else "",
+                "ext": ext, "lang": EXT_LANG.get(ext, "other"),
+                "bytes": 0, "loc": rec["max_loc"], "sloc": rec["max_loc"],
+                "todo": 0, "functions": 0, "classes": 0,
+                # No source to parse, so complexity falls back to the same
+                # length proxy the height formula uses.
+                "complexity": max(1, int(rec["max_loc"] / 18)),
+                "max_fn_complexity": 0, "doc_ratio": 0.0, "ext_imports": 0,
+                "in_deg": 0, "out_deg": 0, "parsed": None,
+                "deleted": True, "died_ts": rec["died"],
+            })
+
+    buildings.sort(key=lambda b: b["path"])
+    by_path: dict[str, int] = {b["path"]: i for i, b in enumerate(buildings)}
+    for b in buildings:
+        b.setdefault("deleted", False)
 
     # ---- intra-repo import edges -------------------------------------------
     edge_w: dict[tuple[int, int], int] = {}
-    for bi, imports, rel in pending_imports:
+    for rel, imports in pending_imports:
+        bi = by_path[rel]
         seen_ext = 0
         for module, level, symbols in imports:
             # A symbol in `from X import a, b` may itself be a submodule; those
@@ -195,10 +243,16 @@ def build_city(root: str, opts: WalkOptions | None = None,
     tree = [dirs[k] for k in sorted(dirs)]
 
     git_stats = None
-    commits = []
-    if not no_git:
-        git_stats, commits = mine_git_history(root, buildings, max_commits, since, max_commit_files)
-        
+    commits: list[list[int]] = []
+    if history:
+        git_stats = apply_history(buildings, history, last_commit_ts(root), git_meta)
+        for c in history:
+            if c["bulk"]:
+                continue
+            idxs = sorted({by_path[p] for p, _a, _d, _r in c["files"] if p in by_path})
+            if idxs:
+                commits.append(idxs)
+
     cochange_edges = []
     cochange_pairs = 0
     hidden_coupling = 0
@@ -237,7 +291,15 @@ def build_city(root: str, opts: WalkOptions | None = None,
     }
     
     calculate_health(buildings)
-    
+
+    # Footprints are sized by the largest the file ever was, not by what
+    # survives today. That is what keeps a building's plot fixed while the
+    # timeline plays (ADR-003) - only its height moves.
+    def historical_weight(b: dict) -> float:
+        rec = timeline.get(b["path"])
+        loc = max(b.get("loc") or 0, rec["max_loc"] if rec else 0)
+        return max(1.0, loc ** 0.5)
+
     layout = generate_layout(
         buildings=buildings,
         tree=tree,
@@ -246,8 +308,14 @@ def build_city(root: str, opts: WalkOptions | None = None,
         height_scale=height_scale,
         cochange_edges=cochange_edges,
         import_edges=import_edges,
-        traffic_source=traffic_source
+        traffic_source=traffic_source,
+        weight_fn=historical_weight,
     )
+
+    snaps = compute_snapshots(history, buildings, height_scale, snapshots) \
+        if (history and snapshots >= 2) else None
+
+    stories = generate_stories(buildings, tree, stats, git_stats, history)
 
     return {
         "schema": SCHEMA,
@@ -267,8 +335,8 @@ def build_city(root: str, opts: WalkOptions | None = None,
         "edges": {"import": import_edges, "call": [], "cochange": cochange_edges},
         "git": git_stats,
         "layout": layout,
-        "snapshots": None,  # phase 8
-        "stories": [],      # phase 10
+        "snapshots": snaps,
+        "stories": stories,
         "diagnostics": {"parse_errors": parse_errors[:50]},
     }
 
