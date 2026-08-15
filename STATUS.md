@@ -38,7 +38,7 @@ Thesis: the analysis is the product; the 3D city is its deep-dive view.
 | ID | Task | Status | Blocked by | Notes |
 |----|------|--------|-----------|-------|
 | T19 | `citygen impact` — blast radius CLI | **DONE** | — | Added `impact` CLI command and reverse import index. |
-| T20 | `citygen risk` — shared risk engine | **TODO** | T19 | One library, three surfaces (T21/T22 both consume it). Risk ≠ health: health is "how bad is this file", risk is "how bad is *changing* it". |
+| T20 | `citygen risk` — shared risk engine | **DONE** | T19 | Implemented `score_all` and `score_paths` in `citygen/risk.py` plus the `risk` CLI. |
 | T21 | PR risk comment | **TODO** | T19, T20 | Upgrades `pr-preview.yml` from a download link to the finding itself. Highest retention surface: nobody has to install anything. |
 | T22 | `citygen hook install` | **TODO** | T20 | Read-only over an existing `city.json`; <200 ms budget; warns, never blocks by default. A slow hook gets `--no-verify`'d permanently. |
 | T23 | Profile harness | **TODO** | — | **Runs before T24/T25.** `docs/05-PERFORMANCE.md` shows 34 s cold / 1.5 s warm on 1272 files — that gap suggests I/O, not parsing, and nobody has checked. This task decides what the cache actually targets. |
