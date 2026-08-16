@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
@@ -43,6 +45,52 @@ jobs:
           out/pr-preview.city.json
           out/pr-preview.html
         retention-days: 14
+
+    - name: Compute changed files and PR author emails
+      run: |
+        git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD > changed.txt
+        git log --format=%ae origin/${{ github.base_ref }}...HEAD | sort -u > author_emails.txt
+        echo "changed files:"; cat changed.txt
+
+    - name: Build risk comment
+      id: risk
+      run: |
+        python -m citygen pr-report --city out/pr-preview.city.json \
+          --changed-from-stdin --pr-author-emails author_emails.txt \
+          < changed.txt > comment.md || true
+        if [ -s comment.md ]; then echo "has_comment=true" >> "$GITHUB_OUTPUT"
+        else echo "has_comment=false" >> "$GITHUB_OUTPUT"; fi
+
+    - name: Comment risk finding on PR
+      if: steps.risk.outputs.has_comment == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync('comment.md', 'utf8');
+          const marker = '<!-- chronopolis-risk -->';
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner, repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find(c => c.body && c.body.includes(marker));
+          try {
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }
+          } catch (e) {
+            // Fork PRs commonly run with a read-only GITHUB_TOKEN with no
+            // comment permission - a 403 here must not fail the job.
+            console.log('could not post risk comment (likely a fork PR): ' + e.message);
+          }
 
     - name: Comment on PR
       uses: actions/github-script@v7
