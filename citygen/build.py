@@ -101,7 +101,9 @@ def build_city(root: str, opts: WalkOptions | None = None,
                street_width: float = 2.0,
                height_scale: float = 2.6,
                snapshots: int = 24,
-               ruins: bool = True) -> dict:
+               ruins: bool = True,
+               cache_dir: str | None = None,
+               no_cache: bool = False) -> dict:
     opts = opts or WalkOptions()
     with stage("walk"):
         files: list[FileRec] = walk_repo(root, opts)
@@ -201,10 +203,32 @@ def build_city(root: str, opts: WalkOptions | None = None,
     history: list[dict] = []
     git_meta: dict = {}
     timeline: dict[str, dict] = {}
+    
+    with stage("git_read"):
+        r_meta = repo_meta(root)
+    
     if not no_git:
+        from .cache import Cache
+        c = Cache(root, cache_dir, enabled=not no_cache)
+        head = r_meta.get("head")
+
         with stage("git_read"):
-            h, git_meta = read_history(root, max_commits, since, max_commit_files)
-        history = h or []
+            cache_hit = False
+            if head:
+                key = c.git_key(head, max_commits, since, max_commit_files)
+                cached = c.get_git(key)
+                if cached is not None:
+                    history = cached.get("history", [])
+                    git_meta = cached.get("meta", {})
+                    cache_hit = True
+
+            if not cache_hit:
+                h, git_meta = read_history(root, max_commits, since, max_commit_files)
+                history = h or []
+                if head:
+                    key = c.git_key(head, max_commits, since, max_commit_files)
+                    c.put_git(key, {"history": history, "meta": git_meta})
+
         if history:
             with stage("git_apply"):
                 timeline = reconstruct_timeline(history)
@@ -405,9 +429,6 @@ def build_city(root: str, opts: WalkOptions | None = None,
 
     with stage("stories"):
         stories = generate_stories(buildings, tree, stats, git_stats, history)
-
-    with stage("git_read"):
-        r_meta = repo_meta(root)
 
     return {
         "schema": SCHEMA,

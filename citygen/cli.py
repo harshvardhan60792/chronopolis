@@ -48,6 +48,7 @@ def _cmd_build(a: argparse.Namespace) -> int:
         world_size=a.world_size, street_width=a.street_width,
         height_scale=a.height_scale,
         snapshots=a.snapshots, ruins=not a.no_ruins,
+        cache_dir=a.cache_dir, no_cache=a.no_cache,
     )
     dt = time.time() - t0
     city["build_seconds"] = round(dt, 3)
@@ -418,6 +419,23 @@ def _cmd_hook(a: argparse.Namespace) -> int:
         print("error: unknown hook action", file=sys.stderr)
         return 2
 
+def _cmd_cache(a: argparse.Namespace) -> int:
+    from .cache import Cache
+    c = Cache(".", a.cache_dir, enabled=True)
+    if a.action == "stats":
+        st = c.stats()
+        print(f"Cache at {c.v_dir}:")
+        print(f"  git objects: {st['git_entries']}")
+        print(f"  size: {st['git_bytes']/1024/1024:.2f} MB")
+        return 0
+    elif a.action == "clear":
+        c.clear()
+        print(f"Cleared cache at {c.v_dir}")
+        return 0
+    else:
+        print("error: unknown cache action", file=sys.stderr)
+        return 2
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="citygen",
                                 description="Chronopolis repository analyzer")
@@ -448,6 +466,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="history snapshots for the timeline (0 disables)")
     b.add_argument("--no-ruins", action="store_true",
                    help="omit deleted files instead of rendering them as ruins")
+    b.add_argument("--cache-dir", help="override cache directory location")
+    b.add_argument("--no-cache", action="store_true", help="disable git history cache")
     b.set_defaults(func=_cmd_build)
 
     i = sub.add_parser("inspect", help="print a summary of a city.json")
@@ -517,6 +537,17 @@ def main(argv: list[str] | None = None) -> int:
     hkr.add_argument("--threshold", type=float, default=risk.HIGH_THRESHOLD)
     
     hk.set_defaults(func=_cmd_hook)
+
+    cc = sub.add_parser("cache", help="manage the git history cache")
+    cc_sub = cc.add_subparsers(dest="action", required=True)
+    
+    ccs = cc_sub.add_parser("stats")
+    ccs.add_argument("--cache-dir", help="override cache directory location")
+    
+    ccc = cc_sub.add_parser("clear")
+    ccc.add_argument("--cache-dir", help="override cache directory location")
+    
+    cc.set_defaults(func=_cmd_cache)
 
     a = p.parse_args(argv)
     return a.func(a)
