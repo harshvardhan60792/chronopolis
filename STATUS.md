@@ -43,7 +43,7 @@ Thesis: the analysis is the product; the 3D city is its deep-dive view.
 | T22 | `citygen hook install` | **DONE** | T20 | Pre-commit hook added, non-blocking, execution time measured under budget. |
 | T23 | Profile harness | **DONE** | — | **Runs before T24/T25.** Added `citygen/_profile.py` and `scripts/profile_build.py` to measure build stages and identify bottlenecks. |
 | T24 | Content-addressed cache | **DONE** | T23 | Cache parse results by content hash; never cache resolved edges (resolution depends on the whole file set). Completed 2026-08-16. Added cache layer. |
-| T25 | Incremental rebuild | **TODO** | T24 | The signal task. Invariant: incremental output must be **byte-identical** to a cold build. Verified by a seeded differential fuzz test, not spot checks. |
+| T25 | Incremental rebuild | **DONE** | T24 | The signal task. Invariant: incremental output must be **byte-identical** to a cold build. Verified by a seeded differential fuzz test, not spot checks. Completed 2026-08-16. |
 | T26 | Scale proof | **TODO** | T25 | Real numbers, pinned shas, named machine. Publishes at least one honest failure. Produces the gate for T30/T31. |
 | T27 | Tree-sitter optional backend | **TODO** | T25 | Needs the next free ADR number (T25 may already have taken 014 for the incremental split — check before writing it): core stays stdlib-only, tree-sitter is an extra, CI tests both paths. If the optional path degrades the default path, it is reverted. |
 | T28 | Parser parity | **TODO** | T27 | Hand-counted fixtures per language. Python calibrates against `ast` (exact). Must publish at least one "no measurable gain" or "worse here" finding. |
