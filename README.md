@@ -52,6 +52,15 @@ Evaluates which files are most dangerous to change based on a composite of blast
 - `--fail-over <SCORE>`: Exit with an error if any scored file exceeds the given risk threshold (e.g. 0.70 for high risk).
 - `--json`: Machine-readable output.
 
+`python -m citygen hook`
+Manage a pre-commit hook that warns you when staging high-risk files.
+- `install`: Install the hook to `.git/hooks/pre-commit`.
+  - `--block`: Prevent the commit if high-risk files are staged instead of just warning.
+  - `--threshold <SCORE>`: Override the default risk threshold (0.70).
+  - `--force`: Overwrite an existing pre-commit hook that isn't ours, backing it up first.
+- `uninstall`: Remove the hook if it is ours.
+- `run`: Run the hook logic directly.
+
 ## How to Read the City
 
 ![Overlay modes and the search bar](docs/img/overlays.png)

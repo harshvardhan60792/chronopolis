@@ -19,6 +19,7 @@ from . import __version__
 from .build import build_city
 from .export_html import export_html
 from .walk import WalkOptions
+from . import risk
 
 
 def _use_color() -> bool:
@@ -404,6 +405,19 @@ def _cmd_serve(a: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_hook(a: argparse.Namespace) -> int:
+    from .hook import install, uninstall, run_hook
+    
+    if a.action == "install":
+        return install(a.repo, a.city, a.block, a.threshold, getattr(a, "force", False))
+    elif a.action == "uninstall":
+        return uninstall(a.repo)
+    elif a.action == "run":
+        return run_hook(a.city, a.block, a.threshold)
+    else:
+        print("error: unknown hook action", file=sys.stderr)
+        return 2
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="citygen",
                                 description="Chronopolis repository analyzer")
@@ -483,6 +497,26 @@ def main(argv: list[str] | None = None) -> int:
                          "belonging to the PR's author — see 'Identifying the "
                          "PR author' below. Omit to disable the exclusion rule.")
     pr.set_defaults(func=_cmd_pr_report)
+
+    hk = sub.add_parser("hook", help="manage the pre-commit hook")
+    hk_sub = hk.add_subparsers(dest="action", required=True)
+    
+    hki = hk_sub.add_parser("install")
+    hki.add_argument("--repo", default=".")
+    hki.add_argument("--city", default="out/city.json")
+    hki.add_argument("--block", action="store_true")
+    hki.add_argument("--threshold", type=float, default=risk.HIGH_THRESHOLD)
+    hki.add_argument("--force", action="store_true")
+    
+    hku = hk_sub.add_parser("uninstall")
+    hku.add_argument("--repo", default=".")
+    
+    hkr = hk_sub.add_parser("run")
+    hkr.add_argument("--city", default="out/city.json")
+    hkr.add_argument("--block", action="store_true")
+    hkr.add_argument("--threshold", type=float, default=risk.HIGH_THRESHOLD)
+    
+    hk.set_defaults(func=_cmd_hook)
 
     a = p.parse_args(argv)
     return a.func(a)
