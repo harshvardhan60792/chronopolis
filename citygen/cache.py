@@ -44,7 +44,7 @@ class Cache:
         if not self.enabled:
             return
         path = os.path.join(self.v_dir, "git", f"{key}.json")
-        tmp_path = path + ".tmp"
+        tmp_path = path + f".{os.getpid()}.tmp"
         try:
             with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(record, f, separators=(",", ":"))
