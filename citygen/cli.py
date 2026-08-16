@@ -333,6 +333,33 @@ def _cmd_risk(a: argparse.Namespace) -> int:
 
     return 0
 
+def _cmd_pr_report(a: argparse.Namespace) -> int:
+    import sys
+    from .report import build_report, render_markdown, load_author_emails
+
+    if not os.path.exists(a.city):
+        print(f"no city at {a.city} — run: python -m citygen build . -o {a.city}", file=sys.stderr)
+        return 2
+
+    city = _load(a.city)
+
+    if getattr(a, "changed_from_stdin", False):
+        changed = [line.strip() for line in sys.stdin if line.strip()]
+    else:
+        changed = []
+
+    pr_author_emails = load_author_emails(a.pr_author_emails)
+    report = build_report(city, changed, pr_author_emails)
+
+    if report.get("silent"):
+        return 0
+
+    markdown = render_markdown(report, city)
+    if markdown:
+        print(markdown)
+
+    return 0
+
 
 def _cmd_export(a: argparse.Namespace) -> int:
     from .export_html import export_html
@@ -437,6 +464,16 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--fail-over", type=float, default=None, metavar="SCORE",
                    help="exit 1 if any scored file is riskier than SCORE (for CI)")
     r.set_defaults(func=_cmd_risk)
+    
+    pr = sub.add_parser("pr-report", help="risk finding for a PR, as markdown")
+    pr.add_argument("--city", default="out/city.json")
+    pr.add_argument("--changed-from-stdin", action="store_true", required=True,
+                    help="read changed file paths, one per line, from stdin")
+    pr.add_argument("--pr-author-emails", default=None,
+                    help="path to a file of git commit emails (one per line) "
+                         "belonging to the PR's author — see 'Identifying the "
+                         "PR author' below. Omit to disable the exclusion rule.")
+    pr.set_defaults(func=_cmd_pr_report)
 
     a = p.parse_args(argv)
     return a.func(a)

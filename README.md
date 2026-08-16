@@ -86,10 +86,12 @@ deleted files linger as translucent ruins before they vanish.
 ## CI Integration
 
 `.github/workflows/pr-preview.yml` builds every PR's own checkout into a
-city and uploads a self-contained HTML export as a workflow artifact, with a
-comment linking to it — a reviewer downloads one file and opens it in a
-browser, no server needed. Copy that file into any repo's
-`.github/workflows/` to add the same preview there.
+city. It computes the risk of the changed files (blast radius, ownership,
+complexity, churn, staleness) and posts a comment if it finds high-risk
+changes. The comment also includes a link to a self-contained 3D city HTML
+export — so the reviewer gets the risk finding immediately without clicking
+anything, and the city becomes an optional deep dive. Copy that file into any
+repo's `.github/workflows/` to add the same risk-bot and preview there.
 
 ## Performance
 
