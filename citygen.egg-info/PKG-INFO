@@ -7,7 +7,18 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Provides-Extra: parsers
 Requires-Dist: tree-sitter; extra == "parsers"
-Requires-Dist: tree-sitter-languages; extra == "parsers"
+Requires-Dist: tree-sitter-java; extra == "parsers"
+Requires-Dist: tree-sitter-c-sharp; extra == "parsers"
+Requires-Dist: tree-sitter-c; extra == "parsers"
+Requires-Dist: tree-sitter-cpp; extra == "parsers"
+Requires-Dist: tree-sitter-go; extra == "parsers"
+Requires-Dist: tree-sitter-javascript; extra == "parsers"
+Requires-Dist: tree-sitter-typescript; extra == "parsers"
+Requires-Dist: tree-sitter-ruby; extra == "parsers"
+Requires-Dist: tree-sitter-php; extra == "parsers"
+Requires-Dist: tree-sitter-kotlin; extra == "parsers"
+Requires-Dist: tree-sitter-swift; extra == "parsers"
+Requires-Dist: tree-sitter-rust; extra == "parsers"
 Dynamic: license-file
 
 # Chronopolis

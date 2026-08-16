@@ -10,7 +10,7 @@
 (for_statement) @decision
 (while_statement) @decision
 (do_statement) @decision
-(case_statement) @decision
+(switch_statement) @decision
 (conditional_expression) @decision
 (binary_expression
   operator: ["&&" "||"]) @decision

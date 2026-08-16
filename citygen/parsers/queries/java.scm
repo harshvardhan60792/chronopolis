@@ -14,7 +14,7 @@
 (enhanced_for_statement) @decision
 (while_statement) @decision
 (do_statement) @decision
-(switch_label) @decision
+(switch_expression) @decision
 (catch_clause) @decision
 (ternary_expression) @decision
 (binary_expression

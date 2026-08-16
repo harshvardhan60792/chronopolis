@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Any
 
 import tree_sitter
-import tree_sitter
 
 @dataclass
 class Result:

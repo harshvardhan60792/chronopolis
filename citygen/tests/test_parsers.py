@@ -50,5 +50,28 @@ def test_java_functions_count():
         assert res is not None
         assert res.functions == expected_count, f"Mismatch in {path}: expected {expected_count}, got {res.functions}"
 
+def test_c_metrics():
+    text = b"void main() { if (1) {} }"
+    res = get_metrics("c", text)
+    if res:
+        assert res.functions == 1
+        assert res.complexity == 2
+
+def test_cpp_metrics():
+    text = b"class A { void foo() { switch(x) { case 1: break; case 2: break; } } };"
+    res = get_metrics("cpp", text)
+    if res:
+        assert res.functions == 1
+        assert res.classes == 1
+        assert res.complexity == 2
+
+def test_csharp_metrics():
+    text = b"class A { void foo() { if (1) {} } }"
+    res = get_metrics("c_sharp", text)
+    if res:
+        assert res.functions == 1
+        assert res.classes == 1
+        assert res.complexity == 2
+
 if __name__ == "__main__":
     pytest.main([__file__])

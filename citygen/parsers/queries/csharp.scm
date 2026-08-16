@@ -16,8 +16,8 @@
 (foreach_statement) @decision
 (while_statement) @decision
 (do_statement) @decision
-(switch_section) @decision
-(switch_expression_arm) @decision
+(switch_statement) @decision
+(switch_expression) @decision
 (catch_clause) @decision
 (conditional_expression) @decision
 (binary_expression

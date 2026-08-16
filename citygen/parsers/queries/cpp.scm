@@ -12,7 +12,7 @@
 (for_range_loop) @decision
 (while_statement) @decision
 (do_statement) @decision
-(case_statement) @decision
+(switch_statement) @decision
 (catch_clause) @decision
 (conditional_expression) @decision
 (binary_expression

@@ -4,6 +4,13 @@ import shutil
 
 CACHE_FORMAT_VERSION = "1"
 
+def _backend_tag() -> str:
+    try:
+        from . import parsers
+        return parsers.backend_name()
+    except ImportError:
+        return "builtin"
+
 class Cache:
     def __init__(self, root: str, cache_dir: str | None = None, enabled: bool = True):
         self.root = root
@@ -61,7 +68,7 @@ class Cache:
         return f"{head_sha}-{suffix}"
 
     def git_key_suffix(self, max_commits: int | None, since: str | None, max_commit_files: int) -> str:
-        parts = []
+        parts = [_backend_tag()]
         if max_commits is not None:
             parts.append(f"mc{max_commits}")
         if since is not None:
