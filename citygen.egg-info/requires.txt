@@ -1,4 +1,0 @@
-
-[parsers]
-tree-sitter
-tree-sitter-languages
