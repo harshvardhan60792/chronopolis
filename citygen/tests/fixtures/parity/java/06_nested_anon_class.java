@@ -1,0 +1,1 @@
+class A { void b() { Runnable r = new Runnable() { public void run() {} }; } }

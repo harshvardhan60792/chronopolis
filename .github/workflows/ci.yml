@@ -82,6 +82,7 @@ jobs:
         done
         # Run pytest for the newly added pytest-based tests
         python -m pytest citygen/tests/test_parsers.py
+        python -m pytest citygen/tests/test_parser_parity.py
 
     - name: Build toyrepo city
       run: python -m citygen build fixtures/toyrepo -o out/city.json -v

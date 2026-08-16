@@ -1,0 +1,1 @@
+class A { void b() { int y = switch(x) { case 1 -> 2; default -> 3; }; } }

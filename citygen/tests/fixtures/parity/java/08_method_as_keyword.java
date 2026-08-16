@@ -1,0 +1,1 @@
+class A { void if() {} void switch() {} }

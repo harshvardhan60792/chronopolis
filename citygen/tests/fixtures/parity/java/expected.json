@@ -1,0 +1,122 @@
+{
+  "01_basic.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "02_line_comment.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "03_block_comment.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "04_string_literal.java": {
+    "functions": 0,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "05_string_and_comment.java": {
+    "functions": 0,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "06_nested_anon_class.java": {
+    "functions": 2,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "07_lambda.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "08_method_as_keyword.java": {
+    "functions": 2,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "09_generics.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "10_syntax_error.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "11_nested_classes.java": {
+    "functions": 1,
+    "classes": 2,
+    "complexity": 2,
+    "imports": 0
+  },
+  "12_interfaces_enums_records.java": {
+    "functions": 0,
+    "classes": 3,
+    "complexity": 1,
+    "imports": 0
+  },
+  "13_switch_statement.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "14_switch_expression.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "15_import_keywords.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 1
+  },
+  "16_ternary.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "17_catch_clause.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "18_binary_expr.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 4,
+    "imports": 0
+  },
+  "19_do_while.java": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "20_annotations.java": {
+    "functions": 1,
+    "classes": 2,
+    "complexity": 1,
+    "imports": 0
+  }
+}

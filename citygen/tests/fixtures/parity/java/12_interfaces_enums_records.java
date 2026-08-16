@@ -1,0 +1,1 @@
+interface I {} enum E {} record R() {}

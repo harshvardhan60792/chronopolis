@@ -8,6 +8,7 @@ License-File: LICENSE
 Provides-Extra: parsers
 Requires-Dist: tree-sitter; extra == "parsers"
 Requires-Dist: tree-sitter-java; extra == "parsers"
+Requires-Dist: tree-sitter-python; extra == "parsers"
 Requires-Dist: tree-sitter-c-sharp; extra == "parsers"
 Requires-Dist: tree-sitter-c; extra == "parsers"
 Requires-Dist: tree-sitter-cpp; extra == "parsers"

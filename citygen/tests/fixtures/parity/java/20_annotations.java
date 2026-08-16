@@ -1,0 +1,1 @@
+@interface A {} class B { @A void c() {} }

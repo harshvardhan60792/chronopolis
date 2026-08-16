@@ -22,6 +22,7 @@ _QUERIES = {}
 
 def get_language(lang_name: str) -> tree_sitter.Language | None:
     ts_name_map = {
+        "python": "tree_sitter_python",
         "java": "tree_sitter_java",
         "csharp": "tree_sitter_c_sharp",
         "cpp": "tree_sitter_cpp",

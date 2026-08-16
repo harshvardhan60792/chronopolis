@@ -1,0 +1,1 @@
+class A { class B { void c() { if(d) {} } } }

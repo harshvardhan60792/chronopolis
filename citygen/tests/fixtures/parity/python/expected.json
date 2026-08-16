@@ -1,0 +1,122 @@
+{
+  "01_basic.py": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 2,
+    "imports": 0
+  },
+  "02_line_comment.py": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "03_multiline_string.py": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "04_string_literal.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 1,
+    "imports": 0
+  },
+  "05_string_and_comment.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 1,
+    "imports": 0
+  },
+  "06_nested_funcs.py": {
+    "functions": 2,
+    "classes": 0,
+    "complexity": 1,
+    "imports": 0
+  },
+  "07_lambda.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 2,
+    "imports": 0
+  },
+  "08_method_as_keyword.py": {
+    "functions": 1,
+    "classes": 1,
+    "complexity": 1,
+    "imports": 0
+  },
+  "09_match_case.py": {
+    "functions": 1,
+    "classes": 0,
+    "complexity": 3,
+    "imports": 0
+  },
+  "10_syntax_error.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 1,
+    "imports": 0
+  },
+  "11_nested_classes.py": {
+    "functions": 1,
+    "classes": 2,
+    "complexity": 2,
+    "imports": 0
+  },
+  "12_comprehensions.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 3,
+    "imports": 0
+  },
+  "13_async_funcs.py": {
+    "functions": 1,
+    "classes": 0,
+    "complexity": 3,
+    "imports": 0
+  },
+  "14_imports.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 1,
+    "imports": 3
+  },
+  "15_ternary.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 2,
+    "imports": 0
+  },
+  "16_try_except.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 2,
+    "imports": 0
+  },
+  "17_binary_expr.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 4,
+    "imports": 0
+  },
+  "18_while_else.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 2,
+    "imports": 0
+  },
+  "19_assert.py": {
+    "functions": 0,
+    "classes": 0,
+    "complexity": 2,
+    "imports": 0
+  },
+  "20_decorators.py": {
+    "functions": 1,
+    "classes": 0,
+    "complexity": 1,
+    "imports": 0
+  }
+}

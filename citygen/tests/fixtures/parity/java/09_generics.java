@@ -1,0 +1,1 @@
+class A<T> { void b(List<T> ifList) { if(c) d(); } }

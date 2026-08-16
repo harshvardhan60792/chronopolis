@@ -1,0 +1,1 @@
+class A { void b() { switch(x) { case 1: break; } } }

@@ -20,6 +20,7 @@ packages = ["citygen"]
 parsers = [
     "tree-sitter",
     "tree-sitter-java",
+    "tree-sitter-python",
     "tree-sitter-c-sharp",
     "tree-sitter-c",
     "tree-sitter-cpp",
