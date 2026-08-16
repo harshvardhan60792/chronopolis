@@ -20,13 +20,13 @@ cd cpython
 git checkout e3287f631f3c88ed80191aa222e7fc4ba91edd17
 cd ..
 
-echo "Fetching linux..."
-if [ ! -d "linux" ]; then
-    git clone --filter=blob:none https://github.com/torvalds/linux.git
-fi
-cd linux
-git checkout 3eb40771c00a8488fa6ed2cc1fe203477908bf38
-cd ..
+# echo "Fetching linux..."
+# if [ ! -d "linux" ]; then
+#     git clone --filter=blob:none https://github.com/torvalds/linux.git
+# fi
+# cd linux
+# git checkout 3eb40771c00a8488fa6ed2cc1fe203477908bf38
+# cd ..
 
 echo "Setting up synthetic_250k..."
 if [ ! -d "synthetic_250k" ]; then
@@ -48,5 +48,5 @@ for d in range(250):
     cd ..
 fi
 
-echo -e ".testrepos/flask flask\n.testrepos/cpython cpython\n.testrepos/linux linux\n.testrepos/synthetic_250k synthetic_250k" > manifest.txt
+echo -e ".testrepos/flask flask\n.testrepos/cpython cpython\n.testrepos/synthetic_250k synthetic_250k" > manifest.txt
 echo "Done!"
