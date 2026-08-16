@@ -20,7 +20,7 @@ from .gitmine import (apply_history, last_commit_ts, read_history,
                       reconstruct_timeline)
 from .coupling import calculate_cochange
 from .layout import generate_layout
-from .metrics import (curly_complexity, generic_metrics, go_metrics,
+from .metrics import (curly_metrics, generic_metrics, go_metrics,
                       js_metrics, python_metrics, ruby_metrics)
 from .resolve import JsModuleIndex, ModuleIndex, RubyModuleIndex
 from .snapshots import compute_snapshots
@@ -189,8 +189,11 @@ def build_city(root: str, opts: WalkOptions | None = None,
                 b["functions"] = gr.functions
                 b["complexity"] = gr.complexity
             elif f.lang in CURLY_LANGS:
-                cx = curly_complexity(text)
-                b["complexity"] = cx
+                cr = curly_metrics(f.lang, text)
+                b["functions"] = cr.functions
+                b["classes"] = cr.classes
+                b["complexity"] = cr.complexity
+                b["max_fn_complexity"] = cr.max_fn_complexity
             elif f.lang == "ruby":
                 rr = ruby_metrics(text)
                 b["parsed"] = True
@@ -457,6 +460,11 @@ def build_city(root: str, opts: WalkOptions | None = None,
     with stage("stories"):
         stories = generate_stories(buildings, tree, stats, git_stats, history)
 
+    from .parsers import backend_name
+    pb = backend_name()
+    if verbose:
+        print(f"[citygen] parser backend: {pb}")
+
     return {
         "schema": SCHEMA,
         "citygen_version": __version__,
@@ -468,6 +476,7 @@ def build_city(root: str, opts: WalkOptions | None = None,
             "exclude": opts.exclude,
             "include": opts.include,
             "all_languages": opts.all_languages,
+            "parser_backend": pb,
         },
         "stats": stats,
         "tree": tree,

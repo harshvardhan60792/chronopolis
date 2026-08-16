@@ -197,7 +197,21 @@ _JS_REQUIRE_RE = re.compile(r'''\brequire\(\s*['"]([^'"]+)['"]\s*\)''')
 _JS_DYNAMIC_IMPORT_RE = re.compile(r'''\bimport\(\s*['"]([^'"]+)['"]\s*\)''')
 
 
+@dataclass
+class CurlyResult:
+    functions: int = 0
+    classes: int = 0
+    complexity: int = 1
+    max_fn_complexity: int = 0
+    imports: list[str] = field(default_factory=list)
+
+
 def js_metrics(text: str) -> JsResult:
+    from .parsers import metrics_for
+    ts = metrics_for("javascript", text) # Treat JS/TS the same or pass lang, wait js_metrics doesn't get lang. Let's pass it if needed, or ts can just return standard Result.
+    if ts:
+        return JsResult(functions=ts.functions, classes=ts.classes, complexity=ts.complexity, imports=ts.imports)
+    
     functions = len(_JS_FUNCTION_KEYWORD_RE.findall(text)) + len(_JS_ARROW_ASSIGN_RE.findall(text))
     classes = len(_JS_CLASS_RE.findall(text))
     complexity = 1 + len(_JS_DECISION_RE.findall(text))
@@ -214,6 +228,8 @@ def js_metrics(text: str) -> JsResult:
 class GoResult:
     functions: int = 0
     complexity: int = 1
+    max_fn_complexity: int = 0
+    imports: list[str] = field(default_factory=list)
 
 
 # `func Name(` and `func (recv Type) Name(` - `func` is a reserved word in Go,
@@ -226,6 +242,11 @@ _GO_DECISION_RE = re.compile(r'\b(?:if|for|switch|select|case)\b|&&|\|\|')
 
 
 def go_metrics(text: str) -> GoResult:
+    from .parsers import metrics_for
+    ts = metrics_for("go", text)
+    if ts:
+        return GoResult(functions=ts.functions, complexity=ts.complexity, max_fn_complexity=ts.max_fn_complexity, imports=ts.imports)
+        
     functions = len(_GO_FUNC_RE.findall(text))
     complexity = 1 + len(_GO_DECISION_RE.findall(text))
     return GoResult(functions=functions, complexity=complexity)
@@ -245,8 +266,18 @@ _CURLY_DECISION_RE = re.compile(
 )
 
 
-def curly_complexity(text: str) -> int:
-    return 1 + len(_CURLY_DECISION_RE.findall(text))
+def curly_metrics(lang: str, text: str) -> CurlyResult:
+    from .parsers import metrics_for
+    ts = metrics_for(lang, text)
+    if ts:
+        return CurlyResult(
+            functions=ts.functions,
+            classes=ts.classes,
+            complexity=ts.complexity,
+            max_fn_complexity=ts.max_fn_complexity,
+            imports=ts.imports
+        )
+    return CurlyResult(complexity=1 + len(_CURLY_DECISION_RE.findall(text)))
 
 
 @dataclass
@@ -254,6 +285,7 @@ class RubyResult:
     functions: int = 0
     classes: int = 0
     complexity: int = 1
+    max_fn_complexity: int = 0
     # (spec, is_relative). `require_relative` is always a same-repo path;
     # plain `require` is usually a gem, but idiomatic Ruby also uses it for
     # intra-project files reachable via a lib/app load-path root, so it is
@@ -277,6 +309,12 @@ _RUBY_REQUIRE_RE = re.compile(r'''\brequire\s+['"]([^'"]+)['"]''')
 
 
 def ruby_metrics(text: str) -> RubyResult:
+    from .parsers import metrics_for
+    ts = metrics_for("ruby", text)
+    if ts:
+        # For now, tree-sitter ruby just returns raw imports, we can parse relative vs not
+        return RubyResult(functions=ts.functions, classes=ts.classes, complexity=ts.complexity, max_fn_complexity=ts.max_fn_complexity, imports=ts.imports)
+        
     functions = len(_RUBY_DEF_RE.findall(text))
     classes = len(_RUBY_CLASS_RE.findall(text))
     complexity = 1 + len(_RUBY_DECISION_RE.findall(text))

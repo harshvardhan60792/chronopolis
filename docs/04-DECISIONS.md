@@ -181,3 +181,10 @@ brand colour, since several are cool and would sink into the terrain.
 **Decision:** We abandoned the parse cache and pivoted to an incremental git history cache (git log <cached_head>..HEAD).
 **Why:** git history mining dominates the build time on large repositories. By only mining new commits and prepending them to a cached history, we drastically speed up the build. We enforce a byte-identical invariant between incremental and cold builds by ensuring that if a force-push or rebase breaks the ancestry path (merge-base --is-ancestor), the incremental step silently falls back to a full mine.
 **Cost:** The git cache adds persistent storage (.citygen/cache) and disk IO overhead which can slow down incremental builds on very small repositories where git logs are otherwise instantaneous.
+
+## ADR-015 — Tree-sitter is an optional accuracy upgrade, never a requirement
+**Status:** accepted, amends ADR-006 (does not supersede it)
+**Context:** regex heuristics cap analysis quality for every non-Python language, and 8 languages get no function count at all. Real parsers fix this. ADR-006 forbids dependencies.
+**Decision:** `citygen` core stays stdlib-only and fully functional with zero dependencies. Tree-sitter enters as an extra (`pip install citygen[parsers]`). When the extra is present, a tree-sitter backend supplies metrics; when absent, the existing regex/ast path runs unchanged. CI tests BOTH paths on every commit. We pin the official individual language packages (`tree-sitter-java` etc.) since no single maintained bundle (like `tree-sitter-languages`) is compatible with modern Python environments.
+**Why:** keeps the frictionless install that makes people try it, without capping accuracy forever for people who want more.
+**Cost:** two parsing paths to keep in agreement, a differential test suite to prove they agree (T28), and a permanent rule that the zero-dep path is the default.
