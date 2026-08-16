@@ -10,18 +10,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from citygen.build import build_city
 from citygen.cli import _load
 
-def strip_volatile(city: dict) -> dict:
-    c = dict(city)
-    c.pop("generated_at", None)
-    c.pop("build_seconds", None)
-    return c
+import re
+from citygen.cli import main as cli_main
 
-def assert_byte_identical(c1: dict, c2: dict):
-    sc1 = strip_volatile(c1)
-    sc2 = strip_volatile(c2)
-    # Use json dumps to check byte-identical, ignoring dict key order variations by sorting keys
-    s1 = json.dumps(sc1, sort_keys=True)
-    s2 = json.dumps(sc2, sort_keys=True)
+def run_cli_build(repo, incremental=False, force_full=False, out="out.json"):
+    args = ["build", repo, "-o", out]
+    if incremental:
+        args.append("--incremental")
+    if force_full:
+        args.append("--force-full")
+    assert cli_main(args) == 0
+
+def assert_byte_identical(file1: str, file2: str):
+    with open(file1, "r", encoding="utf-8") as f1, open(file2, "r", encoding="utf-8") as f2:
+        s1 = f1.read()
+        s2 = f2.read()
+    
+    # Strip non-deterministic fields using exact regex
+    s1 = re.sub(r'"generated_at":\s*"[^"]*",?', '', s1)
+    s1 = re.sub(r'"build_seconds":\s*[\d.]+,?', '', s1)
+    s2 = re.sub(r'"generated_at":\s*"[^"]*",?', '', s2)
+    s2 = re.sub(r'"build_seconds":\s*[\d.]+,?', '', s2)
+    
     assert s1 == s2, "incremental output differs from full output!"
 
 def git(*args, cwd=None):
@@ -44,9 +54,14 @@ def repo():
         
         yield d
 
-def test_incremental_rebase_fallback(repo):
+@pytest.fixture
+def outdir():
+    with tempfile.TemporaryDirectory() as d:
+        yield d
+
+def test_incremental_rebase_fallback(repo, outdir):
     # Base build
-    c_full = build_city(repo, incremental=False)
+    run_cli_build(repo, incremental=False, out=os.path.join(outdir, "out_base.json"))
     
     # Amend the commit
     write_file(repo, "main.py", "print('hello2')\n")
@@ -54,14 +69,16 @@ def test_incremental_rebase_fallback(repo):
     git("commit", "--amend", "--no-edit", cwd=repo)
     
     # Incremental should fallback cleanly
-    c_inc = build_city(repo, incremental=True)
+    f_inc = os.path.join(outdir, "out_inc.json")
+    run_cli_build(repo, incremental=True, out=f_inc)
     
     # And it should be identical to a cold build
-    c_new_full = build_city(repo, force_full=True)
-    assert_byte_identical(c_inc, c_new_full)
+    f_full = os.path.join(outdir, "out_full.json")
+    run_cli_build(repo, force_full=True, out=f_full)
+    assert_byte_identical(f_inc, f_full)
 
 
-def test_fuzz_incremental(repo):
+def test_fuzz_incremental(repo, outdir):
     # Perform random mutations and check invariants
     
     mutations = [
@@ -83,13 +100,15 @@ def test_fuzz_incremental(repo):
             pass
             
         # 2. build incremental
-        c_inc = build_city(repo, incremental=True)
+        f_inc = os.path.join(outdir, f"out_inc_{i}.json")
+        run_cli_build(repo, incremental=True, out=f_inc)
         
         # 3. build full
-        c_full = build_city(repo, force_full=True)
+        f_full = os.path.join(outdir, f"out_full_{i}.json")
+        run_cli_build(repo, force_full=True, out=f_full)
         
         # 4. assert identical
-        assert_byte_identical(c_inc, c_full)
+        assert_byte_identical(f_inc, f_full)
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
