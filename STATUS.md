@@ -40,7 +40,7 @@ Thesis: the analysis is the product; the 3D city is its deep-dive view.
 | T19 | `citygen impact` — blast radius CLI | **DONE** | — | Added `impact` CLI command and reverse import index. |
 | T20 | `citygen risk` — shared risk engine | **DONE** | T19 | Implemented `score_all` and `score_paths` in `citygen/risk.py` plus the `risk` CLI. |
 | T21 | PR risk comment | **DONE** | T19, T20 | Upgrades `pr-preview.yml` to post risk findings directly as PR comments, adds `pr-report` CLI, and respects PR author emails. |
-| T22 | `citygen hook install` | **TODO** | T20 | Read-only over an existing `city.json`; <200 ms budget; warns, never blocks by default. A slow hook gets `--no-verify`'d permanently. |
+| T22 | `citygen hook install` | **DONE** | T20 | Pre-commit hook added, non-blocking, execution time measured under budget. |
 | T23 | Profile harness | **DONE** | — | **Runs before T24/T25.** Added `citygen/_profile.py` and `scripts/profile_build.py` to measure build stages and identify bottlenecks. |
 | T24 | Content-addressed cache | **TODO** | T23 | Cache parse results by content hash; never cache resolved edges (resolution depends on the whole file set). |
 | T25 | Incremental rebuild | **TODO** | T24 | The signal task. Invariant: incremental output must be **byte-identical** to a cold build. Verified by a seeded differential fuzz test, not spot checks. |
