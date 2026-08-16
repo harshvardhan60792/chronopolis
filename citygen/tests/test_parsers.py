@@ -49,3 +49,6 @@ def test_java_functions_count():
         res = get_metrics("java", text)
         assert res is not None
         assert res.functions == expected_count, f"Mismatch in {path}: expected {expected_count}, got {res.functions}"
+
+if __name__ == "__main__":
+    pytest.main([__file__])

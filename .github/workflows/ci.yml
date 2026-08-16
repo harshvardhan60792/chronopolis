@@ -54,3 +54,34 @@ jobs:
       # We would run a headless browser test here against ?selftest=1
       # e.g., using puppeteer or playwright to verify SELFTEST OK is printed.
       run: echo "Selftest pending headless browser setup"
+
+  build-and-test-treesitter:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        pip install -e ".[parsers]"
+        pip install pytest
+
+    - name: Run backend tests
+      run: |
+        set -e
+        # Run custom tests first
+        for f in citygen/tests/test_*.py; do
+          if [[ "$f" != "citygen/tests/test_parsers.py" ]]; then
+            echo "== $f =="
+            python "$f"
+          fi
+        done
+        # Run pytest for the newly added pytest-based tests
+        python -m pytest citygen/tests/test_parsers.py
+
+    - name: Build toyrepo city
+      run: python -m citygen build fixtures/toyrepo -o out/city.json -v
