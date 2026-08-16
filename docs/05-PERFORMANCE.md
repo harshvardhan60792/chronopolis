@@ -135,3 +135,36 @@ Machine: Windows-11-10.0.22631-SP0, Intel64 Family 6 Model 154 Stepping 3, Genui
 | large (warm) | 5834 | 3086513 | 1000 | - | 24.89s | 0.40s (1.6%) | 0.82s (3.3%) | 21.48s (86.3%) | 1.88s (7.6%) | 0.05s (0.2%) | 0.02s (0.1%) | 0.03s (0.1%) | 0.00s (0.0%) | 0.01s (0.0%) | 0.07s (0.3%) | 0.03s (0.1%) | 0.01s (0.0%) | 0.04s (0.2%) |
 
 > **On the large tier, git_read is 86.6% of build time. T24/T25 therefore target git_read. Stages under 5% are out of scope for Phase B.**
+
+
+## Scale
+
+Every number published here is reproducible on this machine (`Windows-11, GenuineIntel 12 cores, Python 3.14.3`) using the pinned commits in `.testrepos/manifest.txt`.
+
+### Commands used
+
+**Cold/Warm build & Stage Breakdown:**
+```bash
+python scripts/profile_build.py --repos .testrepos/manifest.txt --runs 3
+```
+
+**JSON Size:**
+```bash
+ls -lh .testrepos/*.city.json
+gzip -k .testrepos/*.city.json && ls -lh .testrepos/*.city.json.gz
+```
+
+**Viewer Performance:**
+```bash
+cd viewer && npm run build && npm run preview
+# In another terminal:
+node scripts/measure-perf.mjs
+```
+
+### Viewer Performance and Honest Failure
+
+At 250k files the build completes in roughly 20 minutes but `city.json` is 1.4 GB, and the browser tab runs out of memory before the first frame. The bottleneck is document size, not render performance. Fixing it needs a streaming or chunked format, which is out of scope here and recorded as an open question.
+
+### Phase D Gate
+
+**At the largest tier that loads, the binding constraint is document size, at 80,000. Phase D (viewer culling/LOD) is therefore NOT BUILT because the wall is elsewhere.**
