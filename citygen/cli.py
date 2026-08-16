@@ -552,6 +552,20 @@ def main(argv: list[str] | None = None) -> int:
     
     cc.set_defaults(func=_cmd_cache)
 
+    def _cmd_research_szz(a):
+        from .research.szz import run_szz
+        return run_szz(a)
+
+    res = sub.add_parser("research", help="internal research tools (do not use)")
+    res_sub = res.add_subparsers(dest="action", required=True)
+    
+    szz = res_sub.add_parser("szz", help="mine the ground truth")
+    szz.add_argument("repo", help="path to repository")
+    szz.add_argument("--max-fixes", type=int, default=500, help="limit number of fix commits")
+    szz.add_argument("-o", "--out", default="out/labels.json", help="output json path")
+    szz.set_defaults(func=_cmd_research_szz)
+
+
     a = p.parse_args(argv)
     return a.func(a)
 
