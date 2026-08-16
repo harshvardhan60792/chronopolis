@@ -104,11 +104,7 @@ repo's `.github/workflows/` to add the same risk-bot and preview there.
 
 ## Performance
 
-Measured at 58–61 fps on a 1272-file repository (cve-bin-tool) on integrated
-graphics, across idle orbit, fast orbit, fly-through, timeline scrubbing and
-every overlay/layer on at once — one draw call per layer, regardless of file
-count (see `docs/01-ARCHITECTURE.md`). Full numbers, hardware and
-reproduction steps in `docs/05-PERFORMANCE.md`.
+Full performance benchmarks, extreme-scale limits, and reproduction steps are documented in `docs/05-PERFORMANCE.md`.
 
 ## Limitations
 
