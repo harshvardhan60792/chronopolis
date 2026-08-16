@@ -103,7 +103,9 @@ def build_city(root: str, opts: WalkOptions | None = None,
                snapshots: int = 24,
                ruins: bool = True,
                cache_dir: str | None = None,
-               no_cache: bool = False) -> dict:
+               no_cache: bool = False,
+               incremental: bool = False,
+               force_full: bool = False) -> dict:
     opts = opts or WalkOptions()
     with stage("walk"):
         files: list[FileRec] = walk_repo(root, opts)
@@ -206,23 +208,48 @@ def build_city(root: str, opts: WalkOptions | None = None,
     
     with stage("git_read"):
         r_meta = repo_meta(root)
-    
+        
     if not no_git:
         from .cache import Cache
+        from .incremental import extend_history
         c = Cache(root, cache_dir, enabled=not no_cache)
         head = r_meta.get("head")
 
         with stage("git_read"):
             cache_hit = False
-            if head:
+            fallback_reason = None
+            
+            if head and force_full:
+                fallback_reason = "--force-full requested"
+            
+            if head and not force_full:
                 key = c.git_key(head, max_commits, since, max_commit_files)
                 cached = c.get_git(key)
                 if cached is not None:
                     history = cached.get("history", [])
                     git_meta = cached.get("meta", {})
                     cache_hit = True
+                    if incremental:
+                        print("[citygen] incremental git: cache hit for HEAD")
+                elif incremental:
+                    latest = c.find_latest_git(max_commits, since, max_commit_files)
+                    if latest is not None:
+                        cached_head, latest_cached = latest
+                        extended = extend_history(latest_cached, root, cached_head)
+                        if extended is not None:
+                            history = extended.get("history", [])
+                            git_meta = extended.get("meta", {})
+                            c.put_git(key, {"history": history, "meta": git_meta})
+                            cache_hit = True
+                            print(f"[citygen] incremental git: extended from {cached_head[:8]}")
+                        else:
+                            fallback_reason = f"history truncated or rebased since {cached_head[:8]}"
+                    else:
+                        fallback_reason = "no cache available"
 
             if not cache_hit:
+                if incremental and fallback_reason:
+                    print(f"[citygen] incremental git: falling back to full ({fallback_reason})")
                 h, git_meta = read_history(root, max_commits, since, max_commit_files)
                 history = h or []
                 if head:

@@ -174,3 +174,10 @@ brand colour, since several are cool and would sink into the terrain.
 **Why:** the reasoning
 **Cost:** what this makes harder later
 ```
+
+## ADR-014 — Pivot to Git history cache for incremental rebuilds
+**Status:** accepted
+**Context:** Incremental rebuilding was originally meant to include a parsing cache. However, T23 performance measurements revealed that parsing source files takes <5% of the total build time even on large repositories (e.g. 22s for git_read vs 0.8s for parse). Caching parsed files would add architectural complexity for negligible gains.
+**Decision:** We abandoned the parse cache and pivoted to an incremental git history cache (git log <cached_head>..HEAD).
+**Why:** git history mining dominates the build time on large repositories. By only mining new commits and prepending them to a cached history, we drastically speed up the build. We enforce a byte-identical invariant between incremental and cold builds by ensuring that if a force-push or rebase breaks the ancestry path (merge-base --is-ancestor), the incremental step silently falls back to a full mine.
+**Cost:** The git cache adds persistent storage (.citygen/cache) and disk IO overhead which can slow down incremental builds on very small repositories where git logs are otherwise instantaneous.

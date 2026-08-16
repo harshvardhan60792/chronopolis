@@ -13,7 +13,7 @@ STAGES_ORDER = [
     "tree", "coupling", "health", "layout", "snapshots", "stories", "serialise"
 ]
 
-def run_build(repo_path: str) -> Tuple[float, Dict[str, float], Dict, int]:
+def run_build(repo_path: str, incremental: bool = False) -> Tuple[float, Dict[str, float], Dict, int]:
     env = os.environ.copy()
     env["CITYGEN_PROFILE"] = "1"
     env["GIT_PAGER"] = "cat"
@@ -21,6 +21,8 @@ def run_build(repo_path: str) -> Tuple[float, Dict[str, float], Dict, int]:
     out_file = os.path.join(".testrepos", "dummy_out.json")
     log_file = os.path.join(".testrepos", "dummy_log.txt")
     cmd = [sys.executable, "-m", "citygen", "build", repo_path, "-o", out_file, "--exclude", ".testrepos/*"]
+    if incremental:
+        cmd.append("--incremental")
     if "cpython" in repo_path or "linux" in repo_path:
         cmd.extend(["--max-commits", "1000"])
     
@@ -51,6 +53,7 @@ def main():
     parser.add_argument("--repos", required=True, help="Manifest file")
     parser.add_argument("--runs", type=int, default=3, help="Number of runs per repo")
     parser.add_argument("--out", default="docs/05-PERFORMANCE.md", help="Output markdown file")
+    parser.add_argument("--incremental", action="store_true", help="Profile incremental 1-commit changes")
     args = parser.parse_args()
 
     repos = []
@@ -94,9 +97,26 @@ def main():
         warm_stages_list = []
         for i in range(args.runs):
             print(f"  Warm run {i+1}/{args.runs}...")
-            w, s, _, _ = run_build(path)
+            if args.incremental:
+                # Make a dummy 1-file change
+                dummy_file = os.path.join(path, f"dummy_{i}.py")
+                with open(dummy_file, "w") as df:
+                    df.write(f"print('dummy {i}')\n")
+                subprocess.run(["git", "-C", path, "add", f"dummy_{i}.py"], check=True, capture_output=True)
+                subprocess.run(["git", "-C", path, "commit", "-m", f"dummy {i}"], check=True, capture_output=True)
+                
+                try:
+                    w, s, _, _ = run_build(path, incremental=True)
+                finally:
+                    pass
+            else:
+                w, s, _, _ = run_build(path)
+                
             warm_walls.append(w)
             warm_stages_list.append(s)
+            
+        if args.incremental:
+            subprocess.run(["git", "-C", path, "reset", "--hard", f"HEAD~{args.runs}"], check=True, capture_output=True)
             
         sorted_indices = sorted(range(len(warm_walls)), key=lambda k: warm_walls[k])
         med_idx = sorted_indices[len(warm_walls) // 2]

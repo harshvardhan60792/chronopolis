@@ -74,7 +74,8 @@ def _clean_rename(path: str) -> tuple[str, bool]:
 
 def read_history(root: str, max_commits: int | None = None,
                  since: str | None = None,
-                 max_commit_files: int = 60) -> tuple[list[dict] | None, dict]:
+                 max_commit_files: int = 60,
+                 rev: str | None = None) -> tuple[list[dict] | None, dict]:
     """Stream `git log --numstat` into commit records, oldest first.
 
     Each record: {sha, ts, name, email, files: [(path, adds, dels, renamed)],
@@ -89,6 +90,8 @@ def read_history(root: str, max_commits: int | None = None,
     prefix = repo_prefix(root)
     cmd = ["git", "-C", root, "log", "--no-merges", "--date=unix",
            f"--format={REC}%H{SEP}%at{SEP}%an{SEP}%ae", "--numstat"]
+    if rev is not None:
+        cmd.append(rev)
     if max_commits is not None:
         cmd += ["-n", str(max_commits)]
     if since is not None:
@@ -164,6 +167,7 @@ def read_history(root: str, max_commits: int | None = None,
         "last_commit_ts": history[-1]["ts"] if history else None,
         "skipped_bulk_commits": skipped_bulk,
         "truncated": max_commits is not None or since is not None,
+        "max_commit_files": max_commit_files,
     }
     meta["window_days"] = (
         int((meta["last_commit_ts"] - meta["first_commit_ts"]) / 86400)

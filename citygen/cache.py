@@ -57,7 +57,11 @@ class Cache:
                 pass
 
     def git_key(self, head_sha: str, max_commits: int | None, since: str | None, max_commit_files: int) -> str:
-        parts = [head_sha]
+        suffix = self.git_key_suffix(max_commits, since, max_commit_files)
+        return f"{head_sha}-{suffix}"
+
+    def git_key_suffix(self, max_commits: int | None, since: str | None, max_commit_files: int) -> str:
+        parts = []
         if max_commits is not None:
             parts.append(f"mc{max_commits}")
         if since is not None:
@@ -66,6 +70,40 @@ class Cache:
             parts.append(f"s{hashed_since}")
         parts.append(f"mf{max_commit_files}")
         return "-".join(parts)
+
+    def find_latest_git(self, max_commits: int | None, since: str | None, max_commit_files: int) -> tuple[str, dict] | None:
+        if not self.enabled:
+            return None
+        
+        suffix = self.git_key_suffix(max_commits, since, max_commit_files) + ".json"
+        git_dir = os.path.join(self.v_dir, "git")
+        if not os.path.exists(git_dir):
+            return None
+
+        candidates = []
+        for name in os.listdir(git_dir):
+            if name.endswith(f"-{suffix}"):
+                p = os.path.join(git_dir, name)
+                try:
+                    mtime = os.path.getmtime(p)
+                    candidates.append((mtime, name))
+                except OSError:
+                    pass
+
+        if not candidates:
+            return None
+
+        # Sort by mtime descending
+        candidates.sort(reverse=True)
+        for _, name in candidates:
+            # name is like `[sha]-[suffix]`
+            head_sha = name[:name.rfind(f"-{suffix}")]
+            key = name[:-5] # remove .json
+            cached = self.get_git(key)
+            if cached is not None:
+                return head_sha, cached
+        
+        return None
 
     def stats(self) -> dict:
         git_dir = os.path.join(self.v_dir, "git")

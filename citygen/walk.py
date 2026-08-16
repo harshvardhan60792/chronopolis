@@ -19,7 +19,7 @@ DEFAULT_DENY_DIRS = {
     "node_modules", "bower_components", "vendor", "third_party",
     "dist", "build", "out", ".next", ".nuxt", ".output", "target",
     ".terraform", ".gradle", ".dart_tool", "Pods",
-    "graphify-out", "chronopolis-out",
+    "graphify-out", "chronopolis-out", ".citygen",
 }
 
 DEFAULT_DENY_FILE_GLOBS = (

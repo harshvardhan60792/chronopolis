@@ -49,6 +49,7 @@ def _cmd_build(a: argparse.Namespace) -> int:
         height_scale=a.height_scale,
         snapshots=a.snapshots, ruins=not a.no_ruins,
         cache_dir=a.cache_dir, no_cache=a.no_cache,
+        incremental=a.incremental, force_full=a.force_full,
     )
     dt = time.time() - t0
     city["build_seconds"] = round(dt, 3)
@@ -468,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="omit deleted files instead of rendering them as ruins")
     b.add_argument("--cache-dir", help="override cache directory location")
     b.add_argument("--no-cache", action="store_true", help="disable git history cache")
+    b.add_argument("--incremental", action="store_true", help="use incremental git history cache")
+    b.add_argument("--force-full", action="store_true", help="ignore cache and force a full git rebuild")
     b.set_defaults(func=_cmd_build)
 
     i = sub.add_parser("inspect", help="print a summary of a city.json")
