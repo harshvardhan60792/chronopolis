@@ -68,9 +68,16 @@ export function initScene(cityData) {
 
     let arcsData = null;
     if (cityData.edges && cityData.edges.import) {
-        arcsData = createArcs(cityData);
+        arcsData = createArcs(cityData, 'import');
         scene.add(arcsData.mesh);
-        updateArcsLegend(arcsData.initialVisible, cityData.edges.import.length, arcsData.truncated);
+        updateArcsLegend(arcsData.initialVisible, cityData.edges.import.length, arcsData.truncated, 'import');
+    }
+
+    let callArcsData = null;
+    if (cityData.edges && cityData.edges.call && cityData.edges.call.length > 0) {
+        callArcsData = createArcs(cityData, 'call');
+        callArcsData.mesh.visible = false; // off by default
+        scene.add(callArcsData.mesh);
     }
 
     let trafficData = null;
@@ -128,7 +135,12 @@ export function initScene(cityData) {
         const k = e.key.toLowerCase();
         if (k === 'i' && arcsData) {
             arcsData.mesh.visible = !arcsData.mesh.visible;
-            updateArcsLegend(arcsData.mesh.visible, cityData.edges.import.length, arcsData.truncated);
+            if (arcsData.mesh.visible && callArcsData) callArcsData.mesh.visible = false;
+            updateArcsLegend(arcsData.mesh.visible, cityData.edges.import.length, arcsData.truncated, 'import');
+        } else if (k === 'c' && callArcsData) {
+            callArcsData.mesh.visible = !callArcsData.mesh.visible;
+            if (callArcsData.mesh.visible && arcsData) arcsData.mesh.visible = false;
+            updateArcsLegend(callArcsData.mesh.visible, cityData.edges.call.length, callArcsData.truncated, 'call');
         } else if (k === 't' && trafficData) {
             trafficData.points.visible = !trafficData.points.visible;
             updateTrafficLegend(trafficData.points.visible, cityData.stats.traffic_source || 'cochange');
@@ -183,6 +195,24 @@ export function initScene(cityData) {
                     const end = arcsData.arcSegmentRange[idx * 2 + 1];
                     if (start < 0) continue;   // truncated out of the mesh
                     const [a, b] = importEdges[idx];
+                    const mult = (timeline.isVisible(a) && timeline.isVisible(b)) ? 1 : 0;
+                    for (let v = start; v <= end; v++) {
+                        colorAttr.array[v * 3] = defAttr.array[v * 3] * mult;
+                        colorAttr.array[v * 3 + 1] = defAttr.array[v * 3 + 1] * mult;
+                        colorAttr.array[v * 3 + 2] = defAttr.array[v * 3 + 2] * mult;
+                    }
+                }
+                colorAttr.needsUpdate = true;
+            }
+            if (callArcsData && cityData.edges.call && cityData.edges.call.length) {
+                const callEdges = cityData.edges.call;
+                const colorAttr = callArcsData.mesh.geometry.attributes.color;
+                const defAttr = callArcsData.mesh.geometry.attributes.defaultColor;
+                for (let idx = 0; idx < callEdges.length; idx++) {
+                    const start = callArcsData.arcSegmentRange[idx * 2];
+                    const end = callArcsData.arcSegmentRange[idx * 2 + 1];
+                    if (start < 0) continue;
+                    const [a, b] = callEdges[idx];
                     const mult = (timeline.isVisible(a) && timeline.isVisible(b)) ? 1 : 0;
                     for (let v = start; v <= end; v++) {
                         colorAttr.array[v * 3] = defAttr.array[v * 3] * mult;

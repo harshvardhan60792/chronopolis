@@ -18,3 +18,5 @@
 (dictionary_comprehension) @decision
 (set_comprehension) @decision
 (generator_expression) @decision
+
+(call) @call

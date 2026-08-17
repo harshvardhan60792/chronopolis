@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { langPalette } from './palette.js';
 
-export function createArcs(cityData) {
-    const importEdges = cityData.edges.import || [];
+export function createArcs(cityData, edgeType = 'import') {
+    const edgeData = cityData.edges[edgeType] || [];
     const maxArcs = 2000;
     
     const buildings = cityData.buildings;
     const plots = cityData.layout.plots;
     
-    let edges = importEdges.map((e, idx) => ({ 
+    let edges = edgeData.map((e, idx) => ({ 
         originalIdx: idx, 
         a: e[0], 
         b: e[1], 
@@ -24,7 +24,7 @@ export function createArcs(cityData) {
         edges = edges.slice(0, maxArcs);
     }
     
-    const arcSegmentRange = new Int32Array(importEdges.length * 2);
+    const arcSegmentRange = new Int32Array(edgeData.length * 2);
     arcSegmentRange.fill(-1);
     
     const segmentsPerArc = 16;
@@ -71,8 +71,13 @@ export function createArcs(cityData) {
             positions[vIdx] = ptA.x; positions[vIdx+1] = ptA.y; positions[vIdx+2] = ptA.z;
             positions[vIdx+3] = ptB.x; positions[vIdx+4] = ptB.y; positions[vIdx+5] = ptB.z;
             
-            const cA = new THREE.Color().copy(aColor).lerp(bColor, tA);
-            const cB = new THREE.Color().copy(aColor).lerp(bColor, tB);
+            let cA = new THREE.Color().copy(aColor).lerp(bColor, tA);
+            let cB = new THREE.Color().copy(aColor).lerp(bColor, tB);
+            
+            if (edgeType === 'call') {
+                cA = new THREE.Color(0xff88ff);
+                cB = new THREE.Color(0xff88ff);
+            }
             
             const bA = 1.0 - tA * 0.7;
             const bB = 1.0 - tB * 0.7;
@@ -98,14 +103,15 @@ export function createArcs(cityData) {
     const mat = new THREE.LineBasicMaterial({
         vertexColors: true,
         transparent: true,
-        opacity: 0.55,
+        opacity: edgeType === 'call' ? 0.3 : 0.55,
+        linewidth: edgeType === 'call' ? 1 : 2,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
     
     const mesh = new THREE.LineSegments(geo, mat);
     
-    const initialVisible = importEdges.length < 400;
+    const initialVisible = edgeType === 'import' && edgeData.length < 400;
     mesh.visible = initialVisible;
     
     return {
