@@ -51,8 +51,8 @@ Thesis: the analysis is the product; the 3D city is its deep-dive view.
 | T32 | SZZ-lite ground truth | **DONE** | T20 | Mine bug-introducing commits. 30-pair manual audit complete (precision 0.37). Runtime and blame failures recorded. Output in `labels.json`. |
 | T33 | Risk score validation | **TODO** | T32 | No ML (`00-VISION.md` non-goal stands, Phase 2 §3.6). Fixed rule, measured. Temporal split to prevent leakage. Ships **even if churn alone wins**. |
 | T34 | Engineering write-up | **TODO** | T25, T26, T33 | One subject, 1500–2500 words, includes a "what went wrong" section. Every number traces to a source doc. |
-| T31 | Viewer stress test | **TODO** | T26 | **Runs before T30.** Identifies which of four possible walls binds; a box is 12 triangles, so "add LOD" is the wrong fix for three of them. |
-| T30 | Viewer scaling | **CONDITIONAL** | T31 | **Not scheduled.** `docs/05-PERFORMANCE.md:66` forbids culling/LOD/octree work without a measurement demanding it, and ADR-002 calls it unnecessary complexity. Built only if T31 overturns both with evidence. `WONTFIX: measured, not the bottleneck` is a successful outcome. |
+| T31 | Viewer stress test | **DONE** | T26 | **Runs before T30.** Identifies which of four possible walls binds; a box is 12 triangles, so "add LOD" is the wrong fix for three of them. |
+| T30 | Viewer scaling | **WONTFIX: measured, not the bottleneck** | T31 | **Not scheduled.** [Measured in docs/05-PERFORMANCE.md](docs/05-PERFORMANCE.md#phase-d-gate). `docs/05-PERFORMANCE.md:66` forbids culling/LOD/octree work without a measurement demanding it, and ADR-002 calls it unnecessary complexity. Built only if T31 overturns both with evidence. `WONTFIX: measured, not the bottleneck` is a successful outcome. |
 
 Phase 2 ordering rules that are not negotiable:
 1. **T23 before T24/T25** — do not cache a stage nobody measured.
