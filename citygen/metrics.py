@@ -168,6 +168,8 @@ class JsResult:
     # Raw import specifiers as written (e.g. "./foo", "../lib/bar", "react").
     # Resolving these to repo paths is resolve.py's job, same split as Python.
     imports: list[str] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+    def_names: list[str] = field(default_factory=list)
 
 
 # `function foo(` / `function*(` / anonymous `function(`.
@@ -204,13 +206,15 @@ class CurlyResult:
     complexity: int = 1
     max_fn_complexity: int = 0
     imports: list[str] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+    def_names: list[str] = field(default_factory=list)
 
 
 def js_metrics(text: str) -> JsResult:
     from .parsers import metrics_for
     ts = metrics_for("javascript", text) # Treat JS/TS the same or pass lang, wait js_metrics doesn't get lang. Let's pass it if needed, or ts can just return standard Result.
     if ts:
-        return JsResult(functions=ts.functions, classes=ts.classes, complexity=ts.complexity, imports=ts.imports)
+        return JsResult(functions=ts.functions, classes=ts.classes, complexity=ts.complexity, imports=ts.imports, calls=ts.calls, def_names=ts.def_names)
     
     functions = len(_JS_FUNCTION_KEYWORD_RE.findall(text)) + len(_JS_ARROW_ASSIGN_RE.findall(text))
     classes = len(_JS_CLASS_RE.findall(text))
@@ -230,6 +234,8 @@ class GoResult:
     complexity: int = 1
     max_fn_complexity: int = 0
     imports: list[str] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+    def_names: list[str] = field(default_factory=list)
 
 
 # `func Name(` and `func (recv Type) Name(` - `func` is a reserved word in Go,
@@ -245,7 +251,7 @@ def go_metrics(text: str) -> GoResult:
     from .parsers import metrics_for
     ts = metrics_for("go", text)
     if ts:
-        return GoResult(functions=ts.functions, complexity=ts.complexity, max_fn_complexity=ts.max_fn_complexity, imports=ts.imports)
+        return GoResult(functions=ts.functions, complexity=ts.complexity, max_fn_complexity=ts.max_fn_complexity, imports=ts.imports, calls=ts.calls, def_names=ts.def_names)
         
     functions = len(_GO_FUNC_RE.findall(text))
     complexity = 1 + len(_GO_DECISION_RE.findall(text))
@@ -275,7 +281,9 @@ def curly_metrics(lang: str, text: str) -> CurlyResult:
             classes=ts.classes,
             complexity=ts.complexity,
             max_fn_complexity=ts.max_fn_complexity,
-            imports=ts.imports
+            imports=ts.imports,
+            calls=ts.calls,
+            def_names=ts.def_names
         )
     return CurlyResult(complexity=1 + len(_CURLY_DECISION_RE.findall(text)))
 
@@ -291,6 +299,8 @@ class RubyResult:
     # intra-project files reachable via a lib/app load-path root, so it is
     # still worth an attempted resolution - same split resolve.py makes.
     imports: list[tuple[str, bool]] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+    def_names: list[str] = field(default_factory=list)
 
 
 # `def name`, `def self.name`, `def name?`/`name!`/`name=` - `def` is a
@@ -313,7 +323,7 @@ def ruby_metrics(text: str) -> RubyResult:
     ts = metrics_for("ruby", text)
     if ts:
         # For now, tree-sitter ruby just returns raw imports, we can parse relative vs not
-        return RubyResult(functions=ts.functions, classes=ts.classes, complexity=ts.complexity, max_fn_complexity=ts.max_fn_complexity, imports=ts.imports)
+        return RubyResult(functions=ts.functions, classes=ts.classes, complexity=ts.complexity, max_fn_complexity=ts.max_fn_complexity, imports=ts.imports, calls=ts.calls)
         
     functions = len(_RUBY_DEF_RE.findall(text))
     classes = len(_RUBY_CLASS_RE.findall(text))

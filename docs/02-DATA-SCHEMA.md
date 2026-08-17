@@ -27,7 +27,8 @@ Keys marked ✅ are emitted today by T01. Keys marked ⏳ are emitted as
   "stats": {                                // ✅
     "files": 39, "dirs": 11, "loc": 5286, "sloc": 4300,
     "functions": 222, "classes": 13, "complexity": 920,
-    "python_files": 20, "import_edges": 37, "parse_errors": 0,
+    "python_files": 20, "import_edges": 37, "call_edges": 17,
+    "call_resolution_rate": 0.016, "parse_errors": 0,
     "langs": { "python": 20, "docs": 12 },
     "avg_health": 0.18                      // mean of buildings[].health; drives weather.js rain
   },
@@ -74,7 +75,7 @@ Keys marked ✅ are emitted today by T01. Keys marked ⏳ are emitted as
 
   "edges": {                                // ✅ container exists
     "import":   [[12, 4, 2]],               // ✅ [fromIdx, toIdx, weight]
-    "call":     [],                         // ⏳ optional, T03 stretch
+    "call":     [[12, 4, 5]],               // ✅ [fromIdx, toIdx, count]
     "cochange": []                          // ⏳ T03 [aIdx, bIdx, count, strength]
   },
 

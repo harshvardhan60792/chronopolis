@@ -19,3 +19,6 @@
   operator: ["&&" "||"]) @decision
 
 (preproc_include) @import
+
+(call_expression) @call
+(new_expression) @call

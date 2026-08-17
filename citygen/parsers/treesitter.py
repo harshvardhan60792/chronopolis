@@ -12,10 +12,16 @@ class Result:
     complexity: int = 1
     max_fn_complexity: int = 0
     imports: list[Any] = None
+    calls: list[str] = None
+    def_names: list[str] = None
 
     def __post_init__(self):
         if self.imports is None:
             self.imports = []
+        if self.calls is None:
+            self.calls = []
+        if self.def_names is None:
+            self.def_names = []
 
 _PARSERS = {}
 _QUERIES = {}
@@ -109,18 +115,35 @@ def get_metrics(lang_name: str, text: str) -> Result | None:
     # Map from node ID to its complexity
     func_complexity = {}
     imports = []
+    calls = []
+    def_names = []
     
-    # First pass: functions, classes, imports
+    # First pass: functions, classes, imports, calls
     for capture_name, nodes in captures.items():
         if capture_name == "function":
             functions += len(nodes)
             for node in nodes:
                 func_complexity[node.id] = 1
+                name_node = node.child_by_field_name("name") or node.child_by_field_name("declarator")
+                if name_node:
+                    def_names.append(name_node.text.decode("utf-8", errors="replace"))
         elif capture_name == "class":
             classes += len(nodes)
+            for node in nodes:
+                name_node = node.child_by_field_name("name")
+                if name_node:
+                    def_names.append(name_node.text.decode("utf-8", errors="replace"))
         elif capture_name == "import":
             for node in nodes:
                 imports.append(node.text.decode("utf-8", errors="replace").strip("\"'"))
+        elif capture_name == "call":
+            for node in nodes:
+                callee_node = node.child_by_field_name("function") or node.child_by_field_name("name") or node.child_by_field_name("type")
+                if callee_node:
+                    calls.append(callee_node.text.decode("utf-8", errors="replace"))
+                else:
+                    if node.children:
+                        calls.append(node.children[0].text.decode("utf-8", errors="replace"))
                 
     # Second pass: decision points (complexity)
     for capture_name, nodes in captures.items():
@@ -141,5 +164,7 @@ def get_metrics(lang_name: str, text: str) -> Result | None:
         classes=classes,
         complexity=complexity,
         max_fn_complexity=max_fn_cx,
-        imports=imports
+        imports=imports,
+        calls=calls,
+        def_names=def_names
     )

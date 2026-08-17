@@ -164,6 +164,8 @@ def build_city(root: str, opts: WalkOptions | None = None,
                 "in_deg": 0,
                 "out_deg": 0,
                 "parsed": False if f.lang == "python" else None,
+                "calls": [],
+                "def_names": set(),
             }
             if f.lang == "python":
                 pr = python_metrics(text, f.rel)
@@ -174,6 +176,8 @@ def build_city(root: str, opts: WalkOptions | None = None,
                     b["complexity"] = pr.complexity
                     b["max_fn_complexity"] = pr.max_func_complexity
                     b["doc_ratio"] = round(pr.doc_lines / gm["loc"], 3) if gm["loc"] else 0.0
+                    b["calls"] = pr.calls
+                    b["def_names"] = set(pr.def_names) if hasattr(pr, "def_names") else set()
                     pending_imports.append((f.rel, pr.imports))
                 else:
                     parse_errors.append({"path": f.rel, "error": pr.error})
@@ -183,23 +187,31 @@ def build_city(root: str, opts: WalkOptions | None = None,
                 b["functions"] = jr.functions
                 b["classes"] = jr.classes
                 b["complexity"] = jr.complexity
+                b["calls"] = jr.calls
+                b["def_names"] = set(jr.def_names) if hasattr(jr, "def_names") else set()
                 pending_imports_js.append((f.rel, jr.imports))
             elif f.lang == "go":
                 gr = go_metrics(text)
                 b["functions"] = gr.functions
                 b["complexity"] = gr.complexity
+                b["calls"] = gr.calls
+                b["def_names"] = set(gr.def_names) if hasattr(gr, "def_names") else set()
             elif f.lang in CURLY_LANGS:
                 cr = curly_metrics(f.lang, text)
                 b["functions"] = cr.functions
                 b["classes"] = cr.classes
                 b["complexity"] = cr.complexity
                 b["max_fn_complexity"] = cr.max_fn_complexity
+                b["calls"] = cr.calls
+                b["def_names"] = set(cr.def_names) if hasattr(cr, "def_names") else set()
             elif f.lang == "ruby":
                 rr = ruby_metrics(text)
                 b["parsed"] = True
                 b["functions"] = rr.functions
                 b["classes"] = rr.classes
                 b["complexity"] = rr.complexity
+                b["calls"] = rr.calls
+                b["def_names"] = set(rr.def_names) if hasattr(rr, "def_names") else set()
                 pending_imports_rb.append((f.rel, rr.imports))
         with stage("tree"):
             buildings.append(b)
@@ -357,6 +369,62 @@ def build_city(root: str, opts: WalkOptions | None = None,
             buildings[a]["out_deg"] += 1
             buildings[b]["in_deg"] += 1
 
+    # ---- intra-repo call edges ---------------------------------------------
+    with stage("resolve"):
+        import_targets = {i: set() for i in range(len(buildings))}
+        for a, b, _w in import_edges:
+            import_targets[a].add(b)
+            
+        def_map = {}
+        basename_map = {}
+        for i, b in enumerate(buildings):
+            basename = b["name"]
+            if "." in basename:
+                basename = basename.rsplit(".", 1)[0]
+            basename_map[basename] = i
+            for d in b.get("def_names", []):
+                def_map.setdefault(d, set()).add(i)
+                
+        # for dotted calls like `foo.bar`, we might just want to check `bar`
+        # or check `foo` against basenames.
+        call_edge_w = {}
+        total_calls = 0
+        resolved_calls = 0
+        
+        for bi, b in enumerate(buildings):
+            calls = b.get("calls", [])
+            total_calls += len(calls)
+            for call in calls:
+                target = None
+                
+                # if dotted, check if base is a known module/file
+                call_base = call.split(".")[0]
+                call_leaf = call.split(".")[-1]
+                
+                if call in b.get("def_names", set()) or call_leaf in b.get("def_names", set()):
+                    target = bi
+                elif call_base in basename_map and basename_map[call_base] in import_targets[bi]:
+                    target = basename_map[call_base]
+                else:
+                    # check imported files for the def
+                    possible_targets = def_map.get(call) or def_map.get(call_leaf)
+                    if possible_targets:
+                        # intersection with imports
+                        valid = possible_targets & import_targets[bi]
+                        if len(valid) == 1:
+                            target = valid.pop()
+                        elif len(possible_targets) == 1:
+                            # globally unique
+                            target = list(possible_targets)[0]
+                
+                if target is not None:
+                    resolved_calls += 1
+                    if target != bi:
+                        call_edge_w[(bi, target)] = call_edge_w.get((bi, target), 0) + 1
+                        
+        call_resolution_rate = round(resolved_calls / total_calls, 4) if total_calls > 0 else 0.0
+        call_edges = [[a, b, w] for (a, b), w in sorted(call_edge_w.items())]
+
     # ---- directory tree (districts) ----------------------------------------
     with stage("tree"):
         dirs: dict[str, dict] = {}
@@ -416,6 +484,8 @@ def build_city(root: str, opts: WalkOptions | None = None,
             "complexity": sum(b["complexity"] for b in buildings),
             "python_files": len(py_paths),
             "import_edges": len(import_edges),
+            "call_edges": len(call_edges),
+            "call_resolution_rate": call_resolution_rate,
             "parse_errors": len(parse_errors),
             "langs": _lang_hist(buildings),
             "cochange_pairs": cochange_pairs,
@@ -465,6 +535,11 @@ def build_city(root: str, opts: WalkOptions | None = None,
     if verbose:
         print(f"[citygen] parser backend: {pb}")
 
+    # Remove temporary sets
+    for b in buildings:
+        if "calls" in b: del b["calls"]
+        if "def_names" in b: del b["def_names"]
+
     return {
         "schema": SCHEMA,
         "citygen_version": __version__,
@@ -481,7 +556,7 @@ def build_city(root: str, opts: WalkOptions | None = None,
         "stats": stats,
         "tree": tree,
         "buildings": buildings,
-        "edges": {"import": import_edges, "call": [], "cochange": cochange_edges},
+        "edges": {"import": import_edges, "call": call_edges, "cochange": cochange_edges},
         "git": git_stats,
         "layout": layout,
         "snapshots": snaps,
