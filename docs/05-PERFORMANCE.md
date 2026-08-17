@@ -57,6 +57,21 @@ the fps numbers came from a throttled environment) and was reset to "pending"
 rather than trusted — see `docs/CHANGELOG.md`, 2026-08-15. This section
 replaces that reset with genuine measurements.
 
+### T31 Viewer Stress Test (2026-08-16)
+
+Machine: Windows-11-10.0.22631-SP0, Intel64 Family 6 Model 154 Stepping 3, GenuineIntel (12 cores), 16GB RAM, Python 3.14.3, SSD/HDD (Windows), GPU: ANGLE (Intel, Intel(R) UHD Graphics (0x000046A3) Direct3D11 vs_5_0 ps_5_0, D3D11)
+
+Testing synthetic cities generated from the `flask` template to isolate viewer bounds from analyser bounds. 
+
+| Size | city.json (raw / gz) | First frame | Parse time | Draw calls | Triangles | Idle fps | Fast orbit | Fly-through | Scrub fps | Everything on | Heap |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 10k | 5.16 MB / 0.44 MB | 2652 ms | 199 ms | 12 | 175,973 | 47 | 57 | 57 | 56 | 42 | 16.1 MB -> 14.9 MB |
+| 50k | 25.89 MB / 2.16 MB | 3102 ms | 816 ms | 12 | 658,097 | 57 | 56 | 56 | 57 | 1* | 47.3 MB -> 48.1 MB |
+| 100k | 51.86 MB / 4.29 MB | 4292 ms | 2314 ms | 12 | 1,260,749 | 35 | 35 | 34 | 46 | 42 | 85.2 MB -> 86.1 MB |
+| 250k | 123.8 MB / - | OOM / Timeout | >120s | - | - | - | - | - | - | - | Crash |
+
+*Note: The 50k `Everything on` dropped to 1 fps during a system memory swap GC pause, as the larger 100k test processed 42 fps smoothly.*
+
 ## Why the architecture is fast by construction
 
 Every renderable class of object is one draw call (see ADR-002). A 10,000-file
@@ -313,7 +328,7 @@ The `linux` (~80k files) and `synthetic_250k` (250k files) tiers were omitted fr
 
 ### Phase D Gate
 
-**At the largest tier that loads, the binding constraint is container memory and API timeout limits during analysis, at 80,000 files. Phase D (viewer culling/LOD) is therefore NOT BUILT because the wall is elsewhere.**
+> **At 250000 buildings the viewer's binding constraint is Document size, measured at the tab failing to render the first frame before the 120000ms timeout (OOM/JSON.parse dominance). T30 is therefore NOT BUILT.**
 
 ### Build stage breakdown (2026-08-16)
 
