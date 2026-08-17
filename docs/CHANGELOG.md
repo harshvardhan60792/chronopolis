@@ -2,6 +2,9 @@
 
 Append one line per completed task. Newest last.
 
+- 2026-08-17 — Evaluated risk model via SZZ ground-truth on test repositories (`citygen research evaluate`).
+- 2026-08-17 — Finalized Engineering Write-up on the Incremental Engine (`docs/11-WRITEUP-incremental.md`). Completed all Phase 2 goals!
+
 - 2026-08-15 — growth-playbook build-out. Triaged `docs/GROWTH_PLAYBOOK.md`'s
   "Casino & Mall Framework" section (manipulative dark-pattern engagement
   tactics, e.g. forced disorientation, loot-box-style unpredictable

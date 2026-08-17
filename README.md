@@ -106,14 +106,15 @@ repo's `.github/workflows/` to add the same risk-bot and preview there.
 
 Full performance benchmarks, extreme-scale limits, and reproduction steps are documented in `docs/05-PERFORMANCE.md`.
 
+## How it works (Engineering Write-up)
+We documented the hardest technical challenge in this project—building an incremental engine that stays strictly byte-identical without dependencies—in our engineering write-up: [The Incremental Engine: Staying Byte-Identical](docs/11-WRITEUP-incremental.md).
+
 ## Limitations
 
-- **Deep Parsing:** Abstract Syntax Tree (AST) deep parsing is Python-only. Three other tiers, by regex heuristic, none of them a real parser (comments/strings aren't stripped, so `// if (x)` in a comment counts):
-  - **JavaScript/TypeScript** — functions, complexity, and import arcs, including resolving `./foo.js` specifiers to `foo.ts` (the ESM-in-TS convention).
-  - **Ruby** — functions, complexity, and import arcs from `require`/`require_relative`. `require 'foo/bar'` is resolved on a best-effort basis against `lib/`/`app/` load-path roots (the gem and Rails convention); unresolved requires are treated as gems, the same split Python/JS make for third-party imports.
-  - **Go** — functions and complexity (`func` is a reserved word, so this is nearly as reliable as JS). No import arcs — Go's import paths need `go.mod` to resolve correctly, which isn't parsed.
-  - **Java, C#, C/C++, PHP, Kotlin, Swift, Rust** — complexity only, from reserved decision-point keywords (`if`/`for`/`while`/`switch`/`catch`/`match`). No function count: none of these languages has a keyword marking a declaration, so a regex can't tell a method from an `if` block without guessing — better to show nothing than a number that looks precise and isn't. No import arcs either.
-  - Every other language (shell, etc.) gets LOC/SLOC/TODO counts only: complexity stays flat at 1, no function count, no import arcs.
+- **Deep Parsing:** Python uses the `ast` module by default, but we now support tree-sitter for robust parsing of Java, C#, C/C++, and Python (via `[parsers]` extra). Without tree-sitter, we fallback to regex heuristics for non-Python languages:
+  - **JavaScript/TypeScript**, **Ruby**, **Go** — functions and complexity. JS/Ruby support basic import arcs.
+  - **Java, C#, C/C++, PHP, Kotlin, Swift, Rust** (without tree-sitter) — complexity only, from reserved keywords. No function counts or import arcs.
+  - Every other language gets LOC/SLOC/TODO counts only: complexity stays flat at 1.
 - **History Approximation:** We capture git snapshots, not every single commit line-by-line, to keep the analysis under 10 seconds.
 - **Ownership:** "Bus factor" and "Ownership" are calculated based on commit counts to a file, not precise blame-based line ownership.
 

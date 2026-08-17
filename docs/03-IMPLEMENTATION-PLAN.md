@@ -8,9 +8,9 @@ Phases are ordered by dependency, not by fun. Do not reorder.
 | Task | Output | Why now |
 |---|---|---|
 | **T01 ✅** parser core | `buildings`, `tree`, `edges.import`, `stats` | Everything reads from this |
-| **T02** git miner | `git`, per-building churn/authors/dates | Needed by heat, ownership, stories, snapshots |
-| **T03** co-change coupling | `edges.cochange` | The traffic data; the project's core novelty |
-| **T04** layout engine | `layout.plots`, `layout.districts`, `layout.roads` | Viewer is trivial once this exists |
+| **T02 ✅** git miner | `git`, per-building churn/authors/dates | Needed by heat, ownership, stories, snapshots |
+| **T03 ✅** co-change coupling | `edges.cochange` | The traffic data; the project's core novelty |
+| **T04 ✅** layout engine | `layout.plots`, `layout.districts`, `layout.roads` | Viewer is trivial once this exists |
 
 Exit criteria: `python -m citygen build ../reachable` produces a city with all
 four sections populated, deterministic across runs, and `inspect` output that a
@@ -68,3 +68,10 @@ go back" — history scrub plus traffic is the moment.
 | T02, T03, T06, T08, T10, T12, T13, T15, T17 | small (≤1 session each) |
 | T05, T07, T14, T18 | medium |
 | T04, T09, T11, T16 | large — read the task file completely before coding |
+
+## Phase 2 (T19–T34) - DONE
+Phase 2 execution is fully complete. For the detailed Phase 2 plan, see [docs/07-PHASE2-PLAN.md](07-PHASE2-PLAN.md).
+- **Phase B (Scale)**: Caching (T24, T25), Performance Framework (T23), Hooks (T22), Impact CLI (T19).
+- **Phase C (Feature parity)**: Tree-sitter (T27), Parser parity docs (T28), Call graph (T29).
+- **Phase D (Viewer boundaries)**: Stress test (T31). (T30 Viewer Scale was measured as WONTFIX).
+- **Phase E (Truth & Docs)**: SZZ validation (T32, T33) and Engineering write-up (T34).
