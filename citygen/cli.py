@@ -565,6 +565,12 @@ def main(argv: list[str] | None = None) -> int:
     szz.add_argument("-o", "--out", default="out/labels.json", help="output json path")
     szz.set_defaults(func=_cmd_research_szz)
 
+    eval_cmd = res_sub.add_parser("evaluate", help="validate the risk score")
+    eval_cmd.add_argument("repo", help="path to repository")
+    eval_cmd.add_argument("--labels", required=True, help="path to labels.json")
+    eval_cmd.add_argument("--split", type=float, default=0.7)
+    eval_cmd.add_argument("-o", "--out", required=True, help="markdown output file")
+    eval_cmd.set_defaults(func=lambda a: __import__("citygen.research.evaluate", fromlist=[""]).run_evaluate(a))
 
     a = p.parse_args(argv)
     return a.func(a)

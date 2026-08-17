@@ -26,7 +26,10 @@ def band(score: float) -> str:
 def _rank(val: float, lst: list) -> float:
     return bisect.bisect_left(lst, val) / len(lst) if lst else 0.0
 
-def score_all(city: dict) -> list[dict]:
+def score_all(city: dict, weights: dict[str, float] = None) -> list[dict]:
+    if weights is None:
+        weights = RISK_WEIGHTS
+        
     buildings = city.get("buildings", [])
     if not buildings:
         return []
@@ -88,13 +91,14 @@ def score_all(city: dict) -> list[dict]:
 
         score = 0.0
         if blast is None:
-            remaining_weight = 1.0 - RISK_WEIGHTS["blast"]
-            for k, v in components.items():
-                if v is not None:
-                    score += (v * RISK_WEIGHTS[k]) / remaining_weight
+            remaining_weight = 1.0 - weights.get("blast", RISK_WEIGHTS["blast"])
+            if remaining_weight > 0:
+                for k, v in components.items():
+                    if v is not None:
+                        score += (v * weights.get(k, RISK_WEIGHTS[k])) / remaining_weight
         else:
             for k, v in components.items():
-                score += v * RISK_WEIGHTS[k]
+                score += v * weights.get(k, RISK_WEIGHTS[k])
 
         score = round(score, 4)
         

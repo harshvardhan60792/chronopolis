@@ -174,9 +174,11 @@ def run_szz(a):
                 
             if shas:
                 if path not in labels_files:
-                    labels_files[path] = {"introduced_bugs": 0, "fix_commits": []}
+                    labels_files[path] = {"introducing_commits": [], "fix_commits": []}
                 
-                labels_files[path]["introduced_bugs"] += len(shas)
+                for sha in shas:
+                    if sha not in labels_files[path]["introducing_commits"]:
+                        labels_files[path]["introducing_commits"].append(sha)
                 if fix_sha not in labels_files[path]["fix_commits"]:
                     labels_files[path]["fix_commits"].append(fix_sha)
                     

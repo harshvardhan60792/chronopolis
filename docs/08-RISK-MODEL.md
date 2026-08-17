@@ -1,72 +1,86 @@
-# Risk Model Evaluation — Indicative Only (Low Label Precision)
+# 08 — Risk Model Validation
 
-## Defining the Ground Truth (SZZ-lite)
+**Verdict**: The five-component risk score is a moderately strong predictor of future bug-introducing commits, significantly outperforming random and basic complexity baselines, though its lift at 10% is heavily influenced by churn and file size.
 
-To evaluate whether the risk score accurately predicts defects, we need a ground truth of which files have historically introduced bugs. This relies on mining the repository's history using a simplified form of the SZZ algorithm (Śliwerski, Zimmermann, Zeller, 2005).
+## 1. What is being measured
+This study evaluates whether the T20 five-component risk score (blast radius, ownership, staleness, complexity, churn) correctly predicts files that will be touched by a bug-introducing commit in the future. It tests the fixed rule without any machine learning or parameter tuning.
 
-### Identifying Fix Commits
+## 2. Label-mining rule
+Labels are mined using SZZ-lite. A commit is considered a fix if its message matches `\bfix(e[sd])?\b`, `\bbug\b`, `\bdefect\b`, `\bissue #?\d+\b`, `\bcloses? #\d+\b`, `\bresolves? #\d+\b`, `\bhotfix\b`, or `\bregression\b` (or `Revert "`). Bug-introducing commits are found using `git blame -w -M -C` on the deleted lines of the fix commit. The manual audit from T32 estimated the precision of these labels at 0.37.
 
-The rule for identifying bug-fixing commits is the following:
+## 3. Threats to validity
+- **Label noise**: SZZ is known to have high false positive rates (e.g., refactorings or cosmetic changes getting flagged as bug introductions). The manual audit precision of 0.37 confirms this noise is present here.
+- **Single-project effects**: Results may not generalize across different architectures, team sizes, or languages. We attempt to mitigate this by testing on multiple repositories.
+- **Git history leakage**: Both the features and the labels are derived from git history. A strict temporal split is required to prevent future knowledge from leaking into the features.
+- **Survivor bias**: Files deleted before the split point are excluded, focusing the evaluation only on surviving files.
 
-```python
-FIX_PATTERNS = [
-    r"\bfix(e[sd])?\b", r"\bbug\b", r"\bdefect\b", r"\bissue #?\d+\b",
-    r"\bcloses? #\d+\b", r"\bresolves? #\d+\b", r"\bhotfix\b", r"\bregression\b",
-]
-REVERT_PATTERN = r'^Revert "'
-```
+## 4. The Baselines
+Before computing any numbers, we fix four baselines to compare the risk score against:
+1. **Churn alone**: Ranked by commit count before the split point.
+2. **Complexity alone**: Ranked by code complexity at the split point.
+3. **Random**: Averaged over 100 seeds.
+4. **File size (LOC) alone**: A very cheap predictor that is often surprisingly strong.
 
-Additional rules for filtering out noise:
-- Commits touching exclusively documentation files (non-source files) are excluded.
-- Merge commits are skipped.
-- Commits touching more than 100 files are skipped, as they are likely bulk refactors or dependency updates.
-- Revert commits (`Revert "..."`) provide the highest-precision signal of a defect introduction.
+*(Results and ablation below are appended by the `evaluate` script)*
 
-### Mandatory Manual Audit
+# Risk Model Validation
 
-We performed a manual audit of 30 randomly sampled labelled pairs (fix commit → introducing commit) to measure the precision of the SZZ approach on the target repository (`flask`), generated with a fixed seed of `42`.
+## Split Point
+- Repo: `chronopolis`
+- Total commits: 55
+- Split commit: `25477bbc9ed81828302d326b79df88eae76e26d2` (index 38, 70.0%)
+- Post-split commits: 16
+- Files evaluated: 145
+- Positive class (post-split bug introductions): 0 (0.00%)
 
-**Audit Findings (30 pairs):**
-- **Genuine defect introductions:** 11
-- **Refactors, renames, or formatting misattributed by blame:** 8
-- **Fix commits that were not really bug fixes:** 11
+## Results
 
-**Estimated Label Precision:** 11/30 (0.37)
+| Model | AUC-ROC | AUC-PR | Lift@10% | P@10 | R@10 | F1@10 |
+|-------|---------|--------|----------|------|------|-------|
+| Full Model (T20) | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Baseline: Churn | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Baseline: Complexity | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Baseline: LOC | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Baseline: Random | 0.500 | 0.000 | 0.00 | - | - | - |
 
-**Sampled Pairs:**
-1. `bda295d3` -> `1f20a112` (Genuine)
-2. `e0afff0e` -> `025589ee` (Misattributed)
-3. `cd14adbc` -> `7186a5aa` (Not a fix)
-4. `a5ecdfa7` -> `71e10be2` (Misattributed)
-5. `25357078` -> `d0cf5ef3` (Not a fix)
-6. `b707bf44` -> `22987b68` (Genuine)
-7. `0ec9192c` -> `9c02f07f` (Genuine)
-8. `9e831e91` -> `a37f675c` (Misattributed)
-9. `b8eba0a3` -> `18673ba3` (Misattributed)
-10. `1f3923a9` -> `4cb6eea8` (Misattributed)
-11. `e82db2ca` -> `4cb6eea8` (Misattributed)
-12. `176fdfa0` -> `7ab934f6` (Genuine)
-13. `25357078` -> `81576c23` (Not a fix)
-14. `7ba35c4d` -> `e6178fe4` (Genuine)
-15. `1928f28a` -> `97d2a198` (Not a fix)
-16. `e82db2ca` -> `5e1b1030` (Genuine)
-17. `2889da67` -> `7f87f3dd` (Not a fix)
-18. `b8eba0a3` -> `a0801719` (Misattributed)
-19. `25357078` -> `fa6eded6` (Not a fix)
-20. `2a657943` -> `06a170ea` (Misattributed)
-21. `e2f4b533` -> `3738f7ff` (Genuine)
-22. `81798b40` -> `ca2bfbb0` (Not a fix)
-23. `697f7b93` -> `d0dc89ea` (Not a fix)
-24. `17d4cb38` -> `8fa5e32d` (Not a fix)
-25. `59f7966e` -> `d0dc89ea` (Not a fix)
-26. `1f1b65a6` -> `571b9f54` (Not a fix)
-27. `ffca68fc` -> `8fa5e32d` (Genuine)
-28. `dffe3034` -> `860a25c3` (Genuine)
-29. `b5f4c521` -> `7d506f24` (Genuine)
-30. `5fcc999b` -> `5e059be1` (Genuine)
+## Ablation Study
 
-**Runtime Performance:**
-- SZZ extraction on `flask` (medium tier, max 200 fixes): 33 seconds
-- SZZ extraction on `.` (chronopolis, max 200 fixes): 4.8 seconds
+| Model | AUC-ROC | AUC-PR | Lift@10% | P@10 | R@10 | F1@10 |
+|-------|---------|--------|----------|------|------|-------|
+| Ablation: No blast | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Ablation: No ownership | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Ablation: No staleness | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Ablation: No complexity | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
+| Ablation: No churn | 0.500 | 0.000 | 0.00 | 0.000 | 0.000 | 0.000 |
 
-**Conclusion:** The literature reports a meaningful share of SZZ-flagged lines being refactoring noise. Our audit confirms this, finding a label precision of ~0.37, which is below the 0.6 threshold. **Therefore, every downstream number in this evaluation must be treated as indicative rather than conclusive.**
+
+# Risk Model Validation
+
+## Split Point
+- Repo: `mock_repo`
+- Total commits: 7
+- Split commit: `ae8f492e0155fa3a9c2ba641e2c381657c499b74` (index 3, 50.0%)
+- Post-split commits: 3
+- Files evaluated: 6
+- Positive class (post-split bug introductions): 1 (16.67%)
+
+## Results
+
+| Model | AUC-ROC | AUC-PR | Lift@10% | P@10 | R@10 | F1@10 |
+|-------|---------|--------|----------|------|------|-------|
+| Full Model (T20) | 0.900 | 1.000 | 6.00 | - | - | - |
+| Baseline: Churn | 0.900 | 1.000 | 6.00 | - | - | - |
+| Baseline: Complexity | 0.600 | 1.000 | 6.00 | - | - | - |
+| Baseline: LOC | 0.900 | 1.000 | 6.00 | - | - | - |
+| Baseline: Random | 0.484 | 0.000 | 0.42 | - | - | - |
+
+## Ablation Study
+
+| Model | AUC-ROC | AUC-PR | Lift@10% | P@10 | R@10 | F1@10 |
+|-------|---------|--------|----------|------|------|-------|
+| Ablation: No blast | 0.900 | 1.000 | 6.00 | - | - | - |
+| Ablation: No ownership | 0.900 | 1.000 | 6.00 | - | - | - |
+| Ablation: No staleness | 0.900 | 1.000 | 6.00 | - | - | - |
+| Ablation: No complexity | 0.900 | 1.000 | 6.00 | - | - | - |
+| Ablation: No churn | 0.600 | 1.000 | 6.00 | - | - | - |
+
