@@ -64,6 +64,7 @@ async function main() {
         await new Promise(r => setTimeout(r, 50));
         
         document.getElementById('dropzone').classList.add('hidden');
+        document.getElementById('home-btn').classList.remove('hidden');
         document.body.style.opacity = '0';
         document.body.style.transition = 'opacity 0.6s ease-in';
         
@@ -80,6 +81,19 @@ async function main() {
     }
 
     setupDropzone(handleCity, err => showError(err.message));
+
+    // '?dropzone=1' is set by the "load a different city" button - it means
+    // skip the auto-load below and go straight to the drop/select screen,
+    // even though a city.json is available to auto-load.
+    if (urlParams.has('dropzone')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('dropzone');
+        window.history.replaceState({}, '', url.toString());
+        dzContent.style.display = 'block';
+        dzLoading.style.display = 'none';
+        dzError.style.display = 'none';
+        return;
+    }
 
     showLoading('downloading city.json...');
     let initialCity = null;

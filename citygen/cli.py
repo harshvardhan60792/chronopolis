@@ -11,9 +11,14 @@ import gzip
 import http.server
 import json
 import os
+import re
+import shutil
 import socketserver
+import subprocess
 import sys
+import tempfile
 import time
+import zipfile
 
 from . import __version__
 from .build import build_city
@@ -29,11 +34,67 @@ def _style(code: str, text: str, enabled: bool) -> str:
     return f"\033[{code}m{text}\033[0m" if enabled else text
 
 
+_GIT_URL_RE = re.compile(r"^(https?://|git@|file://|ssh://)")
+
+
+def _resolve_repo_source(spec: str) -> tuple[str, tempfile.TemporaryDirectory | None]:
+    """Resolve `spec` - a local directory, a local .zip archive, or a
+    git/GitHub URL - to a local directory citygen can walk. Returns
+    (path, tmp) where `tmp` is the TemporaryDirectory to keep alive and
+    clean up when done (None if `spec` was already a plain local directory
+    needing no cleanup)."""
+    if os.path.isdir(spec):
+        return spec, None
+
+    if spec.lower().endswith(".zip") and os.path.isfile(spec):
+        tmp = tempfile.TemporaryDirectory(prefix="citygen-zip-")
+        print(f"[citygen] extracting {spec} ...")
+        with zipfile.ZipFile(spec) as zf:
+            zf.extractall(tmp.name)
+        entries = [e for e in os.listdir(tmp.name) if not e.startswith("__MACOSX")]
+        if len(entries) == 1 and os.path.isdir(os.path.join(tmp.name, entries[0])):
+            return os.path.join(tmp.name, entries[0]), tmp
+        return tmp.name, tmp
+
+    if _GIT_URL_RE.match(spec) or spec.endswith(".git"):
+        # A full `git clone` (not a GitHub zip download) is required here,
+        # not just for correctness but because the whole point of citygen
+        # is git-history mining (churn, authors, the time machine) - a
+        # source-only zip has no .git and would silently produce empty
+        # results for all of that.
+        name = spec.rstrip("/").rsplit("/", 1)[-1]
+        if name.endswith(".git"):
+            name = name[:-4]
+        tmp = tempfile.TemporaryDirectory(prefix="citygen-clone-")
+        dest = os.path.join(tmp.name, name or "repo")
+        print(f"[citygen] cloning {spec} ...")
+        try:
+            subprocess.run(["git", "clone", spec, dest], check=True)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            tmp.cleanup()
+            raise RuntimeError(f"git clone failed for {spec}: {exc}") from exc
+        return dest, tmp
+
+    return spec, None
+
 
 def _cmd_build(a: argparse.Namespace) -> int:
-    if not os.path.isdir(a.repo):
-        print(f"error: not a directory: {a.repo}", file=sys.stderr)
+    try:
+        repo_path, cleanup_tmp = _resolve_repo_source(a.repo)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 2
+    if not os.path.isdir(repo_path):
+        print(f"error: not a directory, .zip file, or git URL: {a.repo}", file=sys.stderr)
+        return 2
+    try:
+        return _run_build(a, repo_path)
+    finally:
+        if cleanup_tmp is not None:
+            cleanup_tmp.cleanup()
+
+
+def _run_build(a: argparse.Namespace, repo_path: str) -> int:
     t0 = time.time()
     opts = WalkOptions(
         include_vendor=a.include_vendor,
@@ -42,7 +103,7 @@ def _cmd_build(a: argparse.Namespace) -> int:
         all_languages=not a.python_only,
     )
     city = build_city(
-        a.repo, opts, verbose=a.verbose,
+        repo_path, opts, verbose=a.verbose,
         no_git=a.no_git, max_commits=a.max_commits, since=a.since,
         max_commit_files=a.max_commit_files, min_cochange=a.min_cochange,
         world_size=a.world_size, street_width=a.street_width,
@@ -422,7 +483,7 @@ def _cmd_hook(a: argparse.Namespace) -> int:
 
 def _cmd_cache(a: argparse.Namespace) -> int:
     from .cache import Cache
-    c = Cache(".", a.cache_dir, enabled=True)
+    c = Cache(a.repo, a.cache_dir, enabled=True)
     if a.action == "stats":
         st = c.stats()
         print(f"Cache at {c.v_dir}:")
@@ -444,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     b = sub.add_parser("build", help="analyze a repo -> city.json")
-    b.add_argument("repo")
+    b.add_argument("repo", help="local directory, a .zip archive, or a git/GitHub URL")
     b.add_argument("-o", "--out", default="out/city.json")
     b.add_argument("--exclude", action="append", metavar="GLOB")
     b.add_argument("--include", action="append", metavar="GLOB")
@@ -545,9 +606,11 @@ def main(argv: list[str] | None = None) -> int:
     cc_sub = cc.add_subparsers(dest="action", required=True)
     
     ccs = cc_sub.add_parser("stats")
+    ccs.add_argument("repo", nargs="?", default=".", help="repo the cache belongs to")
     ccs.add_argument("--cache-dir", help="override cache directory location")
-    
+
     ccc = cc_sub.add_parser("clear")
+    ccc.add_argument("repo", nargs="?", default=".", help="repo the cache belongs to")
     ccc.add_argument("--cache-dir", help="override cache directory location")
     
     cc.set_defaults(func=_cmd_cache)

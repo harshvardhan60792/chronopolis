@@ -8,9 +8,17 @@ export function initUI() {
         <div id="sky-legend" class="legend" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
         <div id="arcs-legend" class="legend hidden" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
         <div id="traffic-legend" class="legend hidden" style="margin-top: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px;"></div>
+        <button id="home-btn" title="Load a different city" class="hidden" style="position: fixed; top: 12px; right: 12px; z-index: 20; pointer-events: auto; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; padding: 6px 10px; font-size: 12px; cursor: pointer; transition: opacity 0.3s;">&larr; load a different city</button>
     `;
-    
+
     const hint = document.getElementById('controls-hint');
+
+    const homeBtn = document.getElementById('home-btn');
+    homeBtn.addEventListener('click', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('dropzone', '1');
+        window.location.href = url.toString();
+    });
     
     setTimeout(() => {
         hint.style.opacity = '0.3';
