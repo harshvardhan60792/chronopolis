@@ -1,6 +1,7 @@
 import os
 import json
 import pytest
+from citygen.parsers import available
 from citygen.parsers.treesitter import get_metrics as ts_get_metrics
 from citygen.metrics import python_metrics, curly_metrics
 
@@ -23,6 +24,14 @@ def get_ts(lang, text):
 
 @pytest.mark.parametrize("lang", ["java", "python"])
 def test_parity_fixtures(lang):
+    # This asserts the tree-sitter backend's accuracy specifically, so it
+    # can only mean something when tree-sitter is actually installed
+    # (ADR-015: optional backend, the `[parsers]` extra) - without it,
+    # get_ts() always returns None and this would always fail, not because
+    # parity regressed but because there was nothing to compare.
+    if not available():
+        pytest.skip("tree-sitter not installed")
+
     lang_dir = os.path.join(FIXTURES_DIR, lang)
     if not os.path.exists(lang_dir):
         pytest.skip(f"No fixtures for {lang}")

@@ -1,12 +1,16 @@
 import pytest
 import os
-from citygen.parsers import backend_name
+from citygen.parsers import available, backend_name
 from citygen.parsers.treesitter import get_metrics
 
 def test_backend_selection():
-    # Make sure we're on tree-sitter when extras are installed
-    if os.environ.get("CITYGEN_PARSER") != "builtin":
-        assert backend_name() == "tree-sitter"
+    # Make sure we're on tree-sitter when the `[parsers]` extra is actually
+    # installed - previously gated on an undocumented env var that's never
+    # set anywhere, so this unconditionally asserted "tree-sitter" even in
+    # the base CI job that never installs it (ADR-015: optional backend).
+    if not available():
+        pytest.skip("tree-sitter not installed")
+    assert backend_name() == "tree-sitter"
         
 def test_java_functions_count():
     # 20 sampled files from gson (commit 556557)

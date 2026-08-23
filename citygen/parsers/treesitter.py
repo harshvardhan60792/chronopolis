@@ -1,9 +1,18 @@
+from __future__ import annotations
+
 import os
 import time
 from dataclasses import dataclass
 from typing import Any
 
-import tree_sitter
+try:
+    import tree_sitter
+except ImportError:
+    # Optional backend (ADR-015, the `[parsers]` extra) - this module must
+    # stay importable without tree_sitter installed, since callers probe
+    # availability via parsers.available()/backend_name() before ever
+    # calling into the functions below that actually use it.
+    tree_sitter = None
 
 @dataclass
 class Result:
