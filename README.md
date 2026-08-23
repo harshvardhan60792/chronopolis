@@ -16,7 +16,7 @@ Traditional static analysis tools output lists and graphs. Chronopolis uses a sp
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/chronopolis.git
+git clone https://github.com/harshvardhan60792/chronopolis.git
 cd chronopolis
 
 # Analyze your own repository (requires Python 3.11+)
