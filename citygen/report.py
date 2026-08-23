@@ -135,7 +135,7 @@ def build_report(city: dict, changed: list[str],
         "total_changed": len(changed),
         "analysed": len(analysed_idx),
         "unanalysed": unanalysed_details,
-        "blast_total": blast_total if blast_known else len(blast_union),
+        "blast_total": blast_total,
         "blast_known": blast_known,
         "reviewers": reviewers,
         "silent": silent,
@@ -157,11 +157,11 @@ def render_markdown(report: dict, city: dict) -> str:
     high_count = len(flagged)
     total = report["total_changed"]
     
-    blast_text = f"{report['blast_total']} files depend on this change"
-    if not report["blast_known"] and report["blast_total"] == 0:
-        # If we can't compute it or it's unknown in some way
-        pass
-    
+    if report["blast_known"]:
+        blast_text = f"{report['blast_total']} files depend on this change"
+    else:
+        blast_text = "blast radius is unknown (some changed files are in unresolved languages)"
+
     lines.append(f"**{high_count} of {total} changed files are high-risk.** {blast_text}.")
     lines.append("")
     lines.append("| File | Risk | Why |")

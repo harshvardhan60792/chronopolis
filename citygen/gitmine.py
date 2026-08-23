@@ -155,6 +155,7 @@ def read_history(root: str, max_commits: int | None = None,
             current["files"].append((path, adds, dels, renamed))
 
     close(current)
+    proc.stdout.close()
     proc.wait()
     if proc.returncode != 0:
         return None, {}

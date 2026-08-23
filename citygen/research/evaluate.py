@@ -117,7 +117,7 @@ def get_git_commits(repo: str) -> list[str]:
 
 
 def run_evaluate(a: argparse.Namespace) -> int:
-    with open(a.labels, "r") as f:
+    with open(a.labels, "r", encoding="utf-8") as f:
         labels_data = json.load(f)
 
     repo = a.repo
@@ -154,17 +154,17 @@ def run_evaluate(a: argparse.Namespace) -> int:
             # But wait, git log in worktree acts exactly like a detached HEAD.
             city = build_city(wt_dir, opts, incremental=False, no_git=False)
             
-            # Assert temporal split explicitly (Requirement 1)
+            # Assert temporal split explicitly (Requirement 1): if the
+            # worktree's HEAD ever drifts from split_commit, features could
+            # be built from commits after the split point, leaking future
+            # data into training - this is the failure mode the task doc
+            # calls "the trap that would invalidate everything," so it must
+            # hard-fail, not just warn.
             repo_last_commit = city.get("repo", {}).get("head", "")
             if repo_last_commit and not repo_last_commit.startswith(split_commit):
-                print(f"WARNING: city repo head {repo_last_commit} does not match {split_commit}")
-                
-            city_authors = city.get("git", {})
-            if "last_commit_ts" in city_authors:
-                # Can't easily assert against post_t_commits without timestamp parsing, 
-                # but the worktree strictly enforces this at the git level.
-                pass
-                
+                print(f"ERROR: city repo head {repo_last_commit} does not match split point {split_commit} - aborting to avoid future-leakage into training")
+                return 1
+
             print("Computing scores...")
             # 5-component score
             scored = score_all(city)
@@ -275,7 +275,7 @@ def run_evaluate(a: argparse.Namespace) -> int:
                 md += md_row(res) + "\n"
 
             # Write out
-            with open(a.out, "a") as f:
+            with open(a.out, "a", encoding="utf-8") as f:
                 f.write("\n" + md + "\n")
                 
             print(f"Appended results to {a.out}")

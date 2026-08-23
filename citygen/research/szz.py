@@ -21,7 +21,7 @@ def get_deleted_lines(root: str, sha: str) -> dict[str, list[tuple[int, int]]]:
         out = None
         for _ in range(3):
             try:
-                out = subprocess.check_output(cmd, text=True, errors="replace", stderr=subprocess.DEVNULL)
+                out = subprocess.check_output(cmd, text=True, encoding="utf-8", errors="replace", stderr=subprocess.DEVNULL)
                 break
             except OSError as e:
                 if "paging file" in str(e):
@@ -71,7 +71,7 @@ def introducers(root: str, fix_sha: str, path: str,
         out = None
         for _ in range(3):
             try:
-                out = subprocess.check_output(blame_cmd, text=True, errors="replace", stderr=subprocess.DEVNULL)
+                out = subprocess.check_output(blame_cmd, text=True, encoding="utf-8", errors="replace", stderr=subprocess.DEVNULL)
                 break
             except OSError as e:
                 if "paging file" in str(e):
@@ -99,7 +99,7 @@ def run_szz(a):
     # 1. Get commit history
     # We need commit sha, message, and files touched
     cmd = ["git", "-C", repo, "log", "--no-merges", "--name-status", "--format=[COMMIT]%x00%H%x00%B%x00"]
-    out = subprocess.check_output(cmd, text=True, errors="replace")
+    out = subprocess.check_output(cmd, text=True, encoding="utf-8", errors="replace")
     
     fix_regexes = [re.compile(p, re.IGNORECASE) for p in FIX_PATTERNS]
     revert_regex = re.compile(REVERT_PATTERN)

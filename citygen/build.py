@@ -177,7 +177,7 @@ def build_city(root: str, opts: WalkOptions | None = None,
                     b["max_fn_complexity"] = pr.max_func_complexity
                     b["doc_ratio"] = round(pr.doc_lines / gm["loc"], 3) if gm["loc"] else 0.0
                     b["calls"] = pr.calls
-                    b["def_names"] = set(pr.def_names) if hasattr(pr, "def_names") else set()
+                    b["def_names"] = set(pr.def_names)
                     pending_imports.append((f.rel, pr.imports))
                 else:
                     parse_errors.append({"path": f.rel, "error": pr.error})

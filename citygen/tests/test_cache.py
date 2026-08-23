@@ -32,11 +32,12 @@ def test_cache_gitignore_created(tmp_path):
     c = Cache(str(tmp_path))
     assert gi.read_text() == "dummy\n"
 
-def test_cache_put_get(tmp_path):
+def test_cache_put_get(tmp_path, monkeypatch):
+    monkeypatch.setattr("citygen.cache._backend_tag", lambda: "builtin")
     c = Cache(str(tmp_path))
-    
+
     key = c.git_key("abcdef123", 100, None, 60)
-    assert key == "abcdef123-mc100-mf60"
+    assert key == "abcdef123-builtin-mc100-mf60"
 
     assert c.get_git(key) is None
 

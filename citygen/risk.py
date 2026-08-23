@@ -360,11 +360,11 @@ def staged_paths(repo_root: str) -> list[str]:
     try:
         out = subprocess.run(
             ["git", "-C", repo_root, "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-            capture_output=True, text=True, timeout=10, encoding="utf-8"
+            capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace"
         )
         if out.returncode != 0:
             return []
         lines = out.stdout.strip().split("\n")
         return [line.replace("\\", "/") for line in lines if line]
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, ValueError):
         return []

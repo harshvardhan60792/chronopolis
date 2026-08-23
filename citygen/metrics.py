@@ -53,6 +53,7 @@ class PyResult:
     imports: list[tuple[str, int, tuple[str, ...]]] = field(default_factory=list)
     import_symbols: list[str] = field(default_factory=list)
     calls: list[str] = field(default_factory=list)   # dotted callee names, raw
+    def_names: list[str] = field(default_factory=list)
     doc_lines: int = 0
     error: str | None = None
 
@@ -116,6 +117,7 @@ def python_metrics(text: str, path: str = "<src>") -> PyResult:
                     is_async=isinstance(child, ast.AsyncFunctionDef),
                     is_method=in_class,
                 ))
+                res.def_names.append(child.name)
                 d = ast.get_docstring(child)
                 if d:
                     res.doc_lines += d.count("\n") + 1
