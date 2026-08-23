@@ -17,21 +17,23 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Install dependencies
+      run: pip install pytest
+
     - name: Run backend tests
-      # NOT `unittest discover`: test_phase1.py and test_invariants.py are
-      # standalone scripts (bare `test_*` functions with their own runner,
-      # documented in docs/06-TESTING.md), not unittest.TestCase subclasses.
-      # `unittest discover` silently finds zero tests in them - confirmed by
-      # running it locally: 13 tests ran instead of the real 30, and the two
-      # skipped files carry the invariant checks (plot overlap, determinism,
-      # no-NaN) that matter most. Running each file directly is what actually
-      # executes all of them and honours their exit codes.
-      run: |
-        set -e
-        for f in citygen/tests/test_*.py; do
-          echo "== $f =="
-          python "$f"
-        done
+      # `python -m pytest citygen/tests/` (not per-file `python file.py`, and
+      # NOT `unittest discover`): several test files import pytest for
+      # fixtures/parametrize and have no __main__ guard, so running them as
+      # raw scripts either crashes on `import pytest` (if pytest isn't
+      # installed) or silently executes zero tests (if it is) - confirmed
+      # locally by running the old per-file loop, which did both depending
+      # on the job. `unittest discover` has its own separate gap: it's blind
+      # to bare `test_*` functions (test_phase1.py, test_invariants.py),
+      # confirmed locally at 13 tests found instead of the real total, and
+      # the skipped files carry the invariant checks (plot overlap,
+      # determinism, no-NaN) that matter most. pytest's own discovery
+      # correctly finds and runs every style in one pass.
+      run: python -m pytest citygen/tests/
 
     - name: Build toyrepo city
       run: python -m citygen build fixtures/toyrepo -o out/city.json
@@ -71,18 +73,7 @@ jobs:
         pip install pytest
 
     - name: Run backend tests
-      run: |
-        set -e
-        # Run custom tests first
-        for f in citygen/tests/test_*.py; do
-          if [[ "$f" != "citygen/tests/test_parsers.py" ]]; then
-            echo "== $f =="
-            python "$f"
-          fi
-        done
-        # Run pytest for the newly added pytest-based tests
-        python -m pytest citygen/tests/test_parsers.py
-        python -m pytest citygen/tests/test_parser_parity.py
+      run: python -m pytest citygen/tests/
 
     - name: Build toyrepo city
       run: python -m citygen build fixtures/toyrepo -o out/city.json -v
