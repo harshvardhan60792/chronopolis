@@ -45,7 +45,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install citygen
-        run: pip install git+https://github.com/OWNER/chronopolis.git
+        run: pip install git+https://github.com/harshvardhan60792/chronopolis.git
 
       - name: Build this repo as a city
         run: python -m citygen build . -o out/city.json
@@ -55,7 +55,7 @@ jobs:
       - name: Check out and build the Chronopolis viewer
         uses: actions/checkout@v4
         with:
-          repository: OWNER/chronopolis
+          repository: harshvardhan60792/chronopolis
           path: _chronopolis
       - uses: actions/setup-node@v4
         with:

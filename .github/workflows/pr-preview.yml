@@ -35,7 +35,7 @@ jobs:
       # CI because citygen/ happens to sit at the checkout root, resolvable
       # via cwd - it silently breaks the moment this file is copied anywhere
       # else, which is exactly the portability this workflow claims to give.
-      run: pip install git+https://github.com/OWNER/chronopolis.git
+      run: pip install git+https://github.com/harshvardhan60792/chronopolis.git
 
     - name: Build city.json for this PR's checkout
       # --max-commits bounds this against a repo with an enormous history -
