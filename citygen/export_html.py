@@ -4,12 +4,32 @@ import base64
 import sys
 import re
 
+
+def find_viewer_dist() -> str:
+    """Locate the built viewer (index.html + assets/).
+
+    `pip install git+https://...` ships the citygen Python package only -
+    viewer/ is a separate JS project, a sibling of citygen/ in this repo's
+    source tree, not part of the installed package - so the default
+    relative-to-__file__ lookup only works when citygen is run from within
+    an actual chronopolis source checkout (dev mode, or this repo's own
+    CI). CHRONOPOLIS_VIEWER_DIST lets any other environment (a foreign
+    repo's CI that built the viewer as a separate step, for example) point
+    at wherever it actually put the built assets.
+    """
+    override = os.environ.get("CHRONOPOLIS_VIEWER_DIST")
+    if override:
+        return override
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viewer', 'dist')
+
+
 def export_html(city_json_path: str, out_html_path: str):
-    viewer_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viewer', 'dist')
+    viewer_dist = find_viewer_dist()
     index_path = os.path.join(viewer_dist, 'index.html')
 
     if not os.path.exists(index_path):
-        print("Error: viewer/dist/index.html not found. Did you run 'npm run build' in viewer/?", file=sys.stderr)
+        print(f"Error: {index_path} not found. Did you run 'npm run build' in viewer/? "
+              f"(or set CHRONOPOLIS_VIEWER_DIST to point at a built viewer)", file=sys.stderr)
         sys.exit(1)
 
     with open(city_json_path, 'rb') as f:

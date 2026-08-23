@@ -29,6 +29,14 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Install citygen
+      # Not on PyPI yet - this step is what actually makes "copy this file"
+      # true for any other repo. Omitting it only worked in this repo's own
+      # CI because citygen/ happens to sit at the checkout root, resolvable
+      # via cwd - it silently breaks the moment this file is copied anywhere
+      # else, which is exactly the portability this workflow claims to give.
+      run: pip install git+https://github.com/OWNER/chronopolis.git
+
     - name: Build city.json for this PR's checkout
       # --max-commits bounds this against a repo with an enormous history -
       # CI time should stay predictable regardless of what's being scanned.

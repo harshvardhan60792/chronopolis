@@ -94,13 +94,23 @@ deleted files linger as translucent ruins before they vanish.
 
 ## CI Integration
 
-`.github/workflows/pr-preview.yml` builds every PR's own checkout into a
-city. It computes the risk of the changed files (blast radius, ownership,
-complexity, churn, staleness) and posts a comment if it finds high-risk
-changes. The comment also includes a link to a self-contained 3D city HTML
-export — so the reviewer gets the risk finding immediately without clicking
-anything, and the city becomes an optional deep dive. Copy that file into any
-repo's `.github/workflows/` to add the same risk-bot and preview there.
+Two ways to add Chronopolis to your own repo — no local install needed for
+either, both run entirely in GitHub Actions.
+
+**Risk bot on every PR.** `.github/workflows/pr-preview.yml` builds every
+PR's own checkout into a city, computes the risk of the changed files (blast
+radius, ownership, complexity, churn, staleness), and posts a comment if it
+finds high-risk changes — with a link to a self-contained 3D city HTML
+export, so the reviewer gets the finding immediately and the city is an
+optional deep dive. Copy that file into any repo's `.github/workflows/` —
+it installs `citygen` itself, so it works standalone in a foreign repo.
+
+**A live, always-current city of your repo.** `templates/chronopolis-pages.yml`
+deploys your repo as an explorable city to your own GitHub Pages, rebuilt on
+every push to main. Copy it in, set Pages source to "GitHub Actions", push —
+the file has the exact steps. `citygen` isn't on PyPI yet, so both templates
+install straight from source; replace the placeholder repo URL in each with
+the real one.
 
 ## Performance
 

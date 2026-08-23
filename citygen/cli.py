@@ -445,9 +445,11 @@ def _cmd_export(a: argparse.Namespace) -> int:
 
 
 def _cmd_serve(a: argparse.Namespace) -> int:
-    viewer_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'viewer', 'dist')
+    from .export_html import find_viewer_dist
+    viewer_dist = find_viewer_dist()
     if not os.path.exists(viewer_dist):
-        print("Error: viewer/dist not found. Did you run 'npm run build'?", file=sys.stderr)
+        print(f"Error: {viewer_dist} not found. Did you run 'npm run build'? "
+              f"(or set CHRONOPOLIS_VIEWER_DIST to point at a built viewer)", file=sys.stderr)
         return 1
 
     import shutil

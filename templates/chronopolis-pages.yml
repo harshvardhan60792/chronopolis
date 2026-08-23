@@ -1,0 +1,79 @@
+# Deploys THIS repo as an explorable Chronopolis 3D city to ITS OWN GitHub
+# Pages, rebuilt automatically on every push to main.
+#
+# --- How to add this to your repo ---
+# 1. Copy this file to .github/workflows/chronopolis-pages.yml in your repo.
+# 2. In your repo's Settings -> Pages, set Source to "GitHub Actions".
+# 3. Push to main (or run it manually from the Actions tab).
+# 4. Your city is live at https://<you>.github.io/<repo>/, kept in sync
+#    with your default branch from then on. No local install needed.
+#
+# citygen isn't on PyPI yet, so this installs straight from source - swap
+# in the real chronopolis repo URL if it differs from the placeholder below.
+
+name: Chronopolis - repo as a living city
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history - churn/authors/the time machine need it
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install citygen
+        run: pip install git+https://github.com/OWNER/chronopolis.git
+
+      - name: Build this repo as a city
+        run: python -m citygen build . -o out/city.json
+
+      # citygen ships as a Python package only - the viewer is a separate JS
+      # project, so it's built here explicitly rather than assumed present.
+      - name: Check out and build the Chronopolis viewer
+        uses: actions/checkout@v4
+        with:
+          repository: OWNER/chronopolis
+          path: _chronopolis
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci && npm run build
+        working-directory: _chronopolis/viewer
+
+      - name: Export self-contained HTML
+        env:
+          CHRONOPOLIS_VIEWER_DIST: _chronopolis/viewer/dist
+        run: |
+          mkdir -p site
+          python -m citygen export out/city.json -o site/index.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
