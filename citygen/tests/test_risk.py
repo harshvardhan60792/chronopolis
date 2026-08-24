@@ -118,6 +118,42 @@ def test_score_paths_preserves_order_and_reports_missing():
     assert "not analysed" in res[1]["reasons"][0]
     assert res[2]["path"] == "a.py"
 
+def test_score_paths_matches_score_all():
+    # Regression test: score_paths used to reimplement scoring with a
+    # different blast-radius reference distribution (direct dependents,
+    # not score_all's transitive BFS count) and silently dropped its own
+    # `weights` argument - the same file could score differently
+    # depending on which entry point scored it. A 4-file import chain
+    # (f0 -> f1 -> f2 -> f3) makes direct-dependents (1) and transitive
+    # blast radius (3, for f3) actually diverge, so this would have
+    # caught the bug.
+    city = {
+        "buildings": [
+            {"path": f"f{i}.py", "lang": "python", "complexity": i + 1,
+             "bus_factor": 2, "owner_share": 0.5, "stale_days": i * 10,
+             "churn": i + 1}
+            for i in range(4)
+        ],
+        "edges": {"import": [[0, 1, 1], [1, 2, 1], [2, 3, 1]]},
+        "git": {"authors": [{"name": "A", "email": "a@a"}]},
+    }
+    all_paths = [b["path"] for b in city["buildings"]]
+
+    all_scored = {s["path"]: s for s in score_all(city)}
+    paths_scored = {s["path"]: s for s in score_paths(city, all_paths)}
+
+    for path in all_paths:
+        assert paths_scored[path]["score"] == all_scored[path]["score"], path
+        assert paths_scored[path]["components"] == all_scored[path]["components"], path
+        assert paths_scored[path]["reasons"] == all_scored[path]["reasons"], path
+
+    # weights must actually be honoured, not silently dropped
+    custom_weights = {"blast": 0.0, "ownership": 0.0, "staleness": 0.0, "complexity": 1.0, "churn": 0.0}
+    all_custom = {s["path"]: s for s in score_all(city, custom_weights)}
+    paths_custom = {s["path"]: s for s in score_paths(city, all_paths, custom_weights)}
+    for path in all_paths:
+        assert paths_custom[path]["score"] == all_custom[path]["score"], path
+
 def test_staged_paths_empty_when_no_git():
     # In a non-git dir, it should return []
     # We can mock subprocess or run it in a temp dir
