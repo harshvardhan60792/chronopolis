@@ -501,6 +501,14 @@ def _cmd_cache(a: argparse.Namespace) -> int:
         return 2
 
 def main(argv: list[str] | None = None) -> int:
+    # Windows consoles default stdout/stderr to the system codepage (cp1252),
+    # which can't encode characters like the em dash used in risk reasons -
+    # forcing utf-8 here matches how output looks everywhere else (files,
+    # CI logs on Linux, the JSON itself).
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     p = argparse.ArgumentParser(prog="citygen",
                                 description="Chronopolis repository analyzer")
     p.add_argument("--version", action="version", version=f"citygen {__version__}")
